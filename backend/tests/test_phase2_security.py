@@ -92,29 +92,9 @@ async def client(require_db: None) -> AsyncIterator[AsyncClient]:
 
 
 async def _cancellable_order(demo_key: str = "demo-anya") -> str:
-    from app.core.config import get_settings
-    from app.database.session import reset_engine
-    from app.models import Order, OrderStatus, User
+    from tests.helpers import ensure_cancellable_order
 
-    get_settings.cache_clear()
-    reset_engine()
-    from app.database.session import SessionLocal
-
-    async with SessionLocal() as db:
-        user = (await db.execute(select(User).where(User.demo_key == demo_key))).scalar_one()
-        order = (
-            await db.execute(
-                select(Order)
-                .where(
-                    Order.user_id == user.id,
-                    Order.status.in_([OrderStatus.PENDING, OrderStatus.CONFIRMED]),
-                )
-                .limit(1)
-            )
-        ).scalar_one_or_none()
-        if order is None:
-            pytest.skip("No cancellable order")
-        return order.order_number
+    return await ensure_cancellable_order(demo_key)
 
 
 # ---------------------------------------------------------------------------

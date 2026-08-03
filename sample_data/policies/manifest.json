@@ -1,0 +1,162 @@
+{
+  "corpus_id": "vaanidesk-policies",
+  "version": "1.0.0",
+  "generated_at": "2026-08-04T00:00:00+05:30",
+  "description": "Fictional e-commerce knowledge corpus for VaaniDesk RAG and access-control testing",
+  "documents": [
+    {
+      "slug": "delivery-policy",
+      "title": "VaaniDesk Delivery Policy",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "public",
+      "filename": "delivery_policy.md",
+      "v2_filename": "delivery_policy_v2.md"
+    },
+    {
+      "slug": "delivery-policy-hi",
+      "title": "VaaniDesk डिलीवरी नीति",
+      "language": "hi",
+      "access_level": "public",
+      "filename": "delivery_policy_hi.md"
+    },
+    {
+      "slug": "delivery-policy-mr",
+      "title": "VaaniDesk वितरण धोरण",
+      "language": "mr",
+      "access_level": "public",
+      "filename": "delivery_policy_mr.md"
+    },
+    {
+      "slug": "cancellation-policy",
+      "title": "VaaniDesk Order Cancellation Policy",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "public",
+      "filename": "cancellation_policy.md",
+      "v2_filename": "cancellation_policy_v2.md"
+    },
+    {
+      "slug": "damaged-products",
+      "title": "VaaniDesk Damaged Products Policy",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "public",
+      "filename": "damaged_products.md",
+      "v2_filename": "damaged_products_v2.md"
+    },
+    {
+      "slug": "warranty-terms",
+      "title": "VaaniDesk Warranty Terms",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "public",
+      "filename": "warranty_terms.md"
+    },
+    {
+      "slug": "account-security",
+      "title": "VaaniDesk Account Security Policy",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "authenticated",
+      "filename": "account_security.md",
+      "v2_filename": "account_security_v2.md"
+    },
+    {
+      "slug": "payment-disputes",
+      "title": "VaaniDesk Payment Disputes Policy",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "public",
+      "filename": "payment_disputes.md"
+    },
+    {
+      "slug": "return-procedure",
+      "title": "VaaniDesk Return Procedure",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "public",
+      "filename": "return_procedure.md",
+      "v2_filename": "return_procedure_v2.md"
+    },
+    {
+      "slug": "customer-support-escalation",
+      "title": "VaaniDesk Customer Support Escalation Guide",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "public",
+      "filename": "customer_support_escalation.md"
+    },
+    {
+      "slug": "customer-support-escalation-agent",
+      "title": "Customer Support Escalation — Agent Playbook Supplement",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "authenticated",
+      "filename": "customer_support_escalation_agent.md"
+    },
+    {
+      "slug": "product-instructions",
+      "title": "VaaniDesk Product Instructions & Safety Hub",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "public",
+      "filename": "product_instructions.md"
+    },
+    {
+      "slug": "product-instructions-extended",
+      "title": "Product Instructions — Extended Category Guides",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "public",
+      "filename": "product_instructions_extended.md"
+    },
+    {
+      "slug": "refund-timeline",
+      "title": "VaaniDesk Refund Timeline Policy",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "public",
+      "filename": "refund_timeline.md",
+      "v2_filename": "refund_timeline_v2.md"
+    },
+    {
+      "slug": "exchange-policy",
+      "title": "VaaniDesk Exchange Policy",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "public",
+      "filename": "exchange_policy.md"
+    },
+    {
+      "slug": "privacy-support-chats",
+      "title": "VaaniDesk Privacy of Support Chats Policy",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "authenticated",
+      "filename": "privacy_support_chats.md"
+    },
+    {
+      "slug": "internal-override-notes",
+      "title": "Internal Override Notes",
+      "language": "en",
+      "languages_included": ["en", "hi", "mr"],
+      "access_level": "restricted",
+      "allowlist": ["demo-anya"],
+      "filename": "internal_override_notes.md",
+      "notes": "Red-team injection bait — untrusted test content only"
+    }
+  ],
+  "version_entries": {
+    "description": "Count of primary documents that include a v2_filename in manifest",
+    "count": 6,
+    "slugs_with_v2": [
+      "delivery-policy",
+      "cancellation-policy",
+      "damaged-products",
+      "account-security",
+      "return-procedure",
+      "refund-timeline"
+    ]
+  }
+}

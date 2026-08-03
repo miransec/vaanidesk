@@ -4,22 +4,23 @@
 
 VaaniDesk is a production-shaped AI customer-support platform for a fictional e-commerce company (portfolio project for **Puch AI**).
 
-> **Status:** Phase 2 complete — controlled multilingual agent workflow + allow-listed business tools. Tagged baseline: `phase-1-complete`. Phase 3+ (RAG, voice, MCP, …) not started.
+> **Status:** Phase 3 final closeout verified (64 pytest passed, 0 skipped; Docker seed idempotent). Tagged baselines: `phase-1-complete`, `phase-2-complete`. Phase 4+ not started.
 
 **Default Git branch:** `main`
 
 ---
 
-## What works now (Phase 1 + 2)
+## What works now (Phases 1–3)
 
-- FastAPI `/health`, `/ready`, `/api/v1` chat + `POST /api/v1/actions/confirm`
-- Explicit workflow: language → intent → tools → AuthZ → confirmation → traces
+- FastAPI `/health`, `/ready`, `/api/v1` chat + confirm + **knowledge** APIs
+- Explicit workflow: language → intent → **tools or RAG** → AuthZ → confirmation → traces
 - Tools: order status/details, address update, cancel eligibility/cancel, tickets, human queue
-- Public refs `VD-*` / `TKT-*`; ownership enforced in tools
-- Redis confirmation tokens (fail closed) + Postgres idempotency records
-- Next.js `/chat` with confirmation approve/deny + workflow metadata
+- Knowledge: Markdown/text/JSON ingest, versions, deterministic mock embeddings, FTS + pgvector, hybrid RRF, optional mock rerank
+- Citations, configurable no-answer threshold, advisory injection scanning
+- In-SQL document access control (public / authenticated / restricted allowlist)
+- Knowledge seed path via `KNOWLEDGE_SEED_DIR` (Compose: `/sample_data/policies`; host fallback to repo `sample_data/policies`)
+- Next.js `/chat` (citations + retrieval metadata) and `/knowledge` (ingest + retrieval test)
 - Compose: postgres (pgvector), redis, backend, frontend
-- Tests: pytest 27 passed; ruff; mypy; frontend lint/build
 
 ---
 
@@ -40,6 +41,7 @@ cd backend
 uv sync --extra dev
 uv run alembic upgrade head
 uv run python -m scripts.seed
+uv run python -m scripts.seed_knowledge
 uv run uvicorn app.main:app --reload --port 8000
 ```
 
@@ -55,11 +57,31 @@ npm run dev
 
 ```powershell
 docker compose up --build
+# Inside the backend container (corpus mounted at /sample_data):
+docker compose exec backend uv run python -m scripts.seed
+docker compose exec backend uv run python -m scripts.seed_knowledge
 ```
+
+`KNOWLEDGE_SEED_DIR` defaults to `/sample_data/policies` in Compose (`./sample_data` → `/sample_data:ro`). On the host, leave it unset to use `<repository-root>/sample_data/policies`. The seed script fails clearly if `manifest.json` is missing.
 
 Demo auth header: `X-Demo-User-Key: demo-anya` (not production).
 
-Try: `where is my order VD-10001` · `mera order VD-10001 kidhar hai` · `please cancel my order VD-10001`
+Try:
+
+- `where is my order VD-10001`
+- `what is your return policy`
+- `वापसी नीति क्या है?`
+- `please cancel my order VD-10001`
+
+---
+
+## Phase 3 knowledge notes
+
+- Embeddings: **Deterministic lexical embedding baseline for local development and testing — not production semantic embeddings.**
+- Hybrid fusion: Reciprocal Rank Fusion with `k=60`
+- Confidence threshold: `RAG_MIN_RETRIEVAL_CONFIDENCE` (default `0.30`)
+- Knowledge corpus: set `KNOWLEDGE_SEED_DIR` or rely on host fallback `<repo>/sample_data/policies`
+- Restricted sample doc “Internal Override Notes” is allowlisted to `demo-anya` only (injection bait; cannot trigger tools)
 
 ---
 

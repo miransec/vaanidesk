@@ -37,3 +37,10 @@ class WorkflowResult:
     entities: dict[str, Any] = field(default_factory=dict)
     provider_name: str = "workflow-heuristic"
     latency_ms: int | None = None
+    citations: list[dict[str, Any]] = field(default_factory=list)
+    retrieval_strategy: str | None = None
+    retrieval_confidence: float | None = None
+    no_answer: bool = False
+    no_answer_reason: str | None = None
+    retrieval_trace_id: UUID | None = None
+    suspicious_evidence: bool = False

@@ -34,6 +34,7 @@ export default function RootLayout({
             <div className="flex gap-4 text-sm text-slate-700">
               <Link href="/">Home</Link>
               <Link href="/chat">Chat</Link>
+              <Link href="/knowledge">Knowledge</Link>
             </div>
           </nav>
           {children}

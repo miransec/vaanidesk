@@ -20,6 +20,7 @@ class Intent(StrEnum):
     CREATE_SUPPORT_TICKET = "create_support_ticket"
     SUPPORT_TICKET_STATUS = "support_ticket_status"
     HUMAN_ESCALATION = "human_escalation"
+    POLICY_QUESTION = "policy_question"
     UNKNOWN = "unknown"
 
 
@@ -183,6 +184,21 @@ class HeuristicIntentClassifier:
                 missing.append("issue_description")
                 q = _clarify_issue(language.language_code)
             return IntentResult(Intent.CREATE_SUPPORT_TICKET, 0.82, entities, missing, q)
+
+        # Policy / knowledge questions (RAG) — before generic order status
+        policy_hit = re.search(
+            r"(policy|warranty|refund|return|exchange|delivery\s+time|shipping|"
+            r"damaged|broken|payment\s+dispute|account\s+security|privacy|"
+            r"what\s+is\s+your|how\s+(do|long|can)|can\s+i\s+return|"
+            r"नीति|वापसी|वारंटी|रिफंड|डिलीवरी\s+नीति|परतावा)",
+            lower,
+        ) or any(x in raw for x in ("नीति", "वापसी", "वारंटी", "परतावा", "रिफंड"))
+        # Do not treat concrete cancel/status with order refs as policy
+        order_action = "order_ref" in entities and re.search(
+            r"\b(cancel|status|where\s+is|track)\b", lower
+        )
+        if policy_hit and not order_action:
+            return IntentResult(Intent.POLICY_QUESTION, 0.86, entities)
 
         # Order details
         if re.search(

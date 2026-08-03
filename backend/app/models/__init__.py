@@ -1,4 +1,4 @@
-"""SQLAlchemy models — Phase 1 + Phase 2 agent/tools."""
+"""SQLAlchemy models — Phase 1 + Phase 2 + Phase 3 knowledge."""
 
 from app.models.entities import (
     AgentTrace,
@@ -21,18 +21,42 @@ from app.models.entities import (
     User,
     WorkflowStatus,
 )
+from app.models.knowledge import (
+    EMBEDDING_DIM,
+    DocumentAccessLevel,
+    DocumentSourceType,
+    IngestionJob,
+    IngestionJobStatus,
+    KnowledgeChunk,
+    KnowledgeDocument,
+    KnowledgeDocumentVersion,
+    ProcessingStatus,
+    RetrievalStrategy,
+    RetrievalTrace,
+)
 
 __all__ = [
+    "EMBEDDING_DIM",
     "AgentTrace",
     "Conversation",
+    "DocumentAccessLevel",
+    "DocumentSourceType",
     "IdempotencyRecord",
     "IdempotencyState",
+    "IngestionJob",
+    "IngestionJobStatus",
+    "KnowledgeChunk",
+    "KnowledgeDocument",
+    "KnowledgeDocumentVersion",
     "Message",
     "MessageRole",
     "Order",
     "OrderItem",
     "OrderStatus",
+    "ProcessingStatus",
     "Product",
+    "RetrievalStrategy",
+    "RetrievalTrace",
     "SupportTicket",
     "TicketCategory",
     "TicketPriority",

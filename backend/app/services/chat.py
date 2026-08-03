@@ -16,6 +16,7 @@ from app.models import Conversation, Message, MessageRole, User, WorkflowStatus
 from app.schemas.chat import (
     ChatMessageCreate,
     ChatMessageResponse,
+    CitationOut,
     ConfirmActionRequest,
     ConfirmActionResponse,
     ConfirmationOut,
@@ -34,10 +35,10 @@ from app.workflows.types import WorkflowResult
 def _provider_meta(language_hint: str | None = None) -> ProviderMetadata:
     return ProviderMetadata(
         provider="workflow-heuristic",
-        model="vaanidesk-phase2-workflow",
+        model="vaanidesk-phase3-workflow",
         is_mock=True,
         language_hint=language_hint,
-        disclaimer="Phase 2 controlled workflow — not a production LLM",
+        disclaimer="Phase 3 controlled workflow + knowledge RAG — not a production LLM",
         extra={},
     )
 
@@ -65,6 +66,13 @@ def _workflow_out(result: WorkflowResult) -> WorkflowOut:
         escalation_reason=result.escalation_reason,
         trace_id=result.trace_id,
         confirmation=confirmation,
+        citations=[CitationOut.model_validate(c) for c in result.citations],
+        retrieval_strategy=result.retrieval_strategy,
+        retrieval_confidence=result.retrieval_confidence,
+        no_answer=result.no_answer,
+        no_answer_reason=result.no_answer_reason,
+        retrieval_trace_id=result.retrieval_trace_id,
+        suspicious_evidence=result.suspicious_evidence,
     )
 
 
@@ -110,6 +118,10 @@ async def create_chat_message(
             "intent": result.intent,
             "language": result.language_code,
             "trace_id": str(result.trace_id) if result.trace_id else None,
+            "retrieval_strategy": result.retrieval_strategy,
+            "retrieval_confidence": result.retrieval_confidence,
+            "no_answer": result.no_answer,
+            "citations": result.citations,
             "is_mock": True,
             "provider": "workflow-heuristic",
         },
@@ -289,13 +301,22 @@ async def get_conversation(
             message="You cannot access another user's conversation.",
             status_code=403,
         )
+    role_rank = {"user": 0, "assistant": 1, "system": 2, "tool": 3}
+    messages = sorted(
+        conversation.messages,
+        key=lambda m: (
+            m.created_at,
+            role_rank.get(m.role.value if hasattr(m.role, "value") else str(m.role), 9),
+            str(m.id),
+        ),
+    )
     return ConversationDetail(
         id=conversation.id,
         user_id=conversation.user_id,
         title=conversation.title,
         created_at=conversation.created_at,
         updated_at=conversation.updated_at,
-        messages=[MessageOut.model_validate(m) for m in conversation.messages],
+        messages=[MessageOut.model_validate(m) for m in messages],
     )
 
 

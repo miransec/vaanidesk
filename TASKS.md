@@ -1,12 +1,12 @@
 # VaaniDesk — Task Tracker
 
-Last updated: 2026-08-04 (Phase 2 security/reproducibility verification pass)
+Last updated: 2026-08-04 (Phase 3 final closeout)
 
 Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` risk
 
 **Default branch:** `main`  
-**Tags:** `phase-1-complete`  
-**HEAD at verification:** `3de09ee` (Phase 1 commit); Phase 2 changes uncommitted pending final review
+**Tags:** `phase-1-complete`, `phase-2-complete`  
+**Phase 3:** final closeout verified — awaiting review (do **not** start Phase 4)
 
 ---
 
@@ -24,37 +24,44 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` 
 
 ## Phase 2 — Agent and tools
 
-- [x] Implementation (provisionally approved)
-- [x] Security & reproducibility verification pass (2026-08-04)
-
-### Verification results (2026-08-04)
-
-| Check | Result |
-|-------|--------|
-| Migration cycle `0002→0001→0002→0001→0002` | Pass |
-| Seed after cycle | 4 users / 25 products / 50 orders; `VD-10001`… contiguous; unique |
-| Order-ref determinism (value formula, not row order) | Pass (`scripts/verify_phase2_refs.py` + tests) |
-| Confirmation: SHA-256 key at rest; no raw token in payload/logs | Pass |
-| Token bind user/tool/args; expire; single-use; cross-user 403 | Pass |
-| Redis unavailable → HTTP 503 create + confirm; no cancel mutation | Pass |
-| Idempotency once + conflict + cross-user isolation + concurrent single winner | Pass |
-| Direct tool AuthZ (bypass routers) | Pass |
-| Public ref alone cannot bypass ownership | Pass |
-| Trace redaction (tokens/addresses) | Pass |
-| FE contract API: approve/deny/unauthorized/expired/reused/redis-503 | Pass |
-| pytest | **41 passed** |
-| ruff check / format --check | Pass |
-| `python -m mypy app` | Pass |
-| `npm run lint` / `npm run build` | Pass |
-| `docker compose config` / `ps` | Pass (all healthy) |
-
-**Not in Phase 2:** RAG, voice, images, WhatsApp, MCP, evals, dashboard, production auth
+- [x] Completed, committed, tagged `phase-2-complete`
 
 ---
 
-## Phase 3 — RAG (not started)
+## Phase 3 — Knowledge / RAG
 
-- [ ] Deferred until final Phase 2 review
+- [x] Models + Alembic `0003_phase3_knowledge`
+- [x] Sample multilingual policy corpus + idempotent seed
+- [x] Ingestion (md/text/json), chunking, mock embeddings, FTS + pgvector
+- [x] Keyword / vector / hybrid (RRF) / hybrid+rerank retrieval
+- [x] In-SQL access control; citations; no-answer; injection advisory
+- [x] Knowledge APIs + `/knowledge` UI; chat citations
+- [x] Docker seed-path fix (`KNOWLEDGE_SEED_DIR` + `/sample_data` mount)
+- [x] Test isolation (cleanup fixtures; demo corpus unchanged after suite)
+- [x] Unauthorized restricted-doc absent from candidates/selected/rerank/trace/citations/context
+- [x] Final quality gates (2026-08-04)
+
+### Final closeout results (2026-08-04)
+
+| Check | Result |
+|-------|--------|
+| `uv run pytest -rs` | **64 passed, 0 skipped** |
+| Knowledge totals before → after suite | **17 / 23 / 241** unchanged |
+| Seed run 1 / run 2 (Docker) | `already_present` 17 docs / 241 chunks both runs |
+| `ruff check .` | Pass |
+| `ruff format --check .` | Pass |
+| `python -m mypy app` | Pass |
+| `npm run lint` | Pass |
+| `npm run build` | Pass |
+| `docker compose ps` | All up; backend/postgres/redis healthy |
+
+**Not in Phase 3:** voice, images, WhatsApp, MCP, full eval suites, public deployment
+
+---
+
+## Phase 4 — (not started)
+
+- [ ] Deferred until Phase 3 review approval
 
 ---
 
@@ -69,5 +76,9 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` 
 ## Notes
 
 - Confirmation Redis key = `vd:confirm:` + SHA-256(raw token); payload omits raw token.
-- Sensitive tools fail closed with `confirmation_unavailable` (503) when Redis is down.
-- Idempotency unique constraint + savepoint handles concurrent duplicate keys.
+- RAG embeddings are deterministic lexical mocks — not production semantic embeddings.
+- Access control filters apply in SQL before candidates leave Postgres.
+- Restricted corpus doc `Internal Override Notes` allowlists `demo-anya` only (injection bait).
+- Knowledge seed: Compose `KNOWLEDGE_SEED_DIR=/sample_data/policies` with `./sample_data:/sample_data:ro`.
+- Phase 2 order helpers re-arm pending/confirmed status instead of skipping when prior cancels exhausted stock.
+- Phase 3 ingest tests use `__vdtest__` titles + `isolated_knowledge` cleanup so the demo corpus is not polluted.

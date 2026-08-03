@@ -181,3 +181,28 @@ Finalized decisions for VaaniDesk. Narrative context remains in [`PLAN.md`](../P
 **Status:** Accepted
 **Decision:** High-risk tools use Redis confirmation tokens (fail closed) **and** Postgres `IdempotencyRecord` rows for mutations. The client receives a raw URL-safe token once; Redis stores only `SHA-256(token)` as the key and never persists the raw token in the JSON payload. Tokens bind user, tool, and argument hash; single-use with TTL. Concurrent idempotency inserts use a savepoint and unique constraint so only one winner executes.
 **Why:** Prevent accidental/duplicate destructive actions even under retries, races, or Redis outages after commit.
+
+---
+
+## ADR-023 — In-SQL knowledge access control
+
+**Status:** Accepted
+**Decision:** Document visibility (`public` / `authenticated` / `restricted`+allowlist) is enforced in the retrieval SQL join/filter before keyword or vector candidates are materialized in application memory.
+**Why:** Unauthorized chunks must never reach fusion, reranking, model context, citations, or trace bodies.
+
+---
+
+## ADR-024 — Hybrid RRF + mock rerank
+
+**Status:** Accepted
+**Decision:** Hybrid retrieval fuses independent keyword and vector rankings with Reciprocal Rank Fusion (`k=60`). Optional `hybrid_rerank` applies a `RerankingProvider` interface; Phase 3 ships a deterministic lexical-overlap mock.
+**Why:** Inspectable fusion scores; swappable real rerankers later without changing API shape.
+
+---
+
+## ADR-025 — Document content is untrusted data
+
+**Status:** Accepted
+**Decision:** Policy corpus text is never treated as instructions. Evidence is wrapped with an explicit DATA preamble; advisory injection patterns may flag review; tools remain on a separate allow-listed path from RAG.
+**Why:** Contain prompt-injection from malicious or compromised documents without claiming a perfect scanner.
+

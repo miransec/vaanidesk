@@ -48,6 +48,15 @@ class ConfirmationOut(BaseModel):
     expires_at: datetime | str
 
 
+class CitationOut(BaseModel):
+    document_title: str
+    document_version: int
+    section_label: str
+    chunk_id: UUID
+    source_type: str
+    score: float
+
+
 class WorkflowOut(BaseModel):
     status: str
     detected_language: str | None = None
@@ -62,6 +71,13 @@ class WorkflowOut(BaseModel):
     escalation_reason: str | None = None
     trace_id: UUID | None = None
     confirmation: ConfirmationOut | None = None
+    citations: list[CitationOut] = Field(default_factory=list)
+    retrieval_strategy: str | None = None
+    retrieval_confidence: float | None = None
+    no_answer: bool = False
+    no_answer_reason: str | None = None
+    retrieval_trace_id: UUID | None = None
+    suspicious_evidence: bool = False
 
 
 class ChatMessageResponse(BaseModel):

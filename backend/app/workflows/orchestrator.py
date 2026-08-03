@@ -30,6 +30,150 @@ from app.workflows.types import ConfirmationView, WorkflowResult
 
 logger = logging.getLogger(__name__)
 
+
+def _policy_retrieval_query(text: str) -> str:
+    """Augment non-English policy asks with English lexical anchors for mock FTS/embeddings."""
+    lower = text.lower()
+    hints: list[str] = [text]
+    pairs = [
+        (("return", "वापसी", "परतावा", "wapas"), "return procedure unused items"),
+        (("warranty", "वारंटी", "वॉरंटी"), "warranty terms coverage"),
+        (("delivery", "डिलीवरी", "वितरण", "shipping"), "delivery policy shipping timeline"),
+        (("cancel", "रद्द", "cancellation"), "cancellation policy order"),
+        (("refund", "रिफंड"), "refund timeline policy"),
+        (("damaged", "क्षतिग्रस्त", "टूटा"), "damaged products policy"),
+        (("payment", "भुगतान", "dispute"), "payment disputes policy"),
+        (("security", "सुरक्षा", "privacy"), "account security privacy"),
+        (("escalat", "एस्केलेश", "मानव"), "customer support escalation"),
+        (("नीति", "धोरण", "policy"), "policy"),
+    ]
+    for needles, hint in pairs:
+        if any(n in lower or n in text for n in needles):
+            hints.append(hint)
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    out: list[str] = []
+    for h in hints:
+        if h not in seen:
+            seen.add(h)
+            out.append(h)
+    return " ".join(out)
+
+
+async def _run_policy_retrieval(
+    *,
+    db: AsyncSession,
+    user: User,
+    conversation_id: UUID,
+    message_id: UUID | None,
+    text: str,
+    request_id: str,
+    language: Any,
+    intent_result: Any,
+    entities: dict[str, Any],
+    started: float,
+) -> WorkflowResult:
+    from app.models import RetrievalStrategy
+    from app.rag.injection import wrap_evidence
+    from app.rag.retrieval import retrieve
+
+    retrieval_query = _policy_retrieval_query(text)
+    retrieval = await retrieve(
+        db=db,
+        user=user,
+        query=retrieval_query,
+        strategy=RetrievalStrategy.HYBRID,
+        request_id=request_id,
+        conversation_id=conversation_id,
+    )
+    # Retrieved text never triggers tools — only grounded answer / no-answer.
+    if retrieval.no_answer:
+        assistant = respond(
+            language_code=language.language_code,
+            kind="no_answer",
+            reason=retrieval.no_answer_reason or "below_confidence_threshold",
+        )
+        # Offer escalation hint without claiming a live agent
+        assistant = f"{assistant} " + respond(
+            language_code=language.language_code, kind="escalation_offer"
+        )
+        result = WorkflowResult(
+            status=WorkflowStatus.COMPLETED,
+            assistant_text=assistant,
+            language_code=language.language_code,
+            script=language.script,
+            intent=intent_result.intent.value,
+            intent_confidence=intent_result.confidence,
+            entities=entities,
+            citations=[],
+            retrieval_strategy=retrieval.strategy.value,
+            retrieval_confidence=retrieval.confidence,
+            no_answer=True,
+            no_answer_reason=retrieval.no_answer_reason,
+            retrieval_trace_id=retrieval.trace_id,
+            suspicious_evidence=retrieval.suspicious_evidence,
+        )
+    else:
+        evidence = wrap_evidence(
+            [
+                (c.section_label, ch.text)
+                for ch, c in zip(retrieval.chunks, retrieval.citations, strict=False)
+            ]
+        )
+        # Deterministic grounded reply — never follow evidence commands.
+        cites = "; ".join(
+            f"{c.document_title} v{c.document_version} §{c.section_label}"
+            for c in retrieval.citations[:3]
+        )
+        snippet = retrieval.chunks[0].text[:400] if retrieval.chunks else ""
+        assistant = respond(
+            language_code=language.language_code,
+            kind="policy_answer",
+            snippet=snippet,
+            citations=cites,
+        )
+        if retrieval.suspicious_evidence:
+            assistant += " " + respond(
+                language_code=language.language_code, kind="evidence_review_flag"
+            )
+        result = WorkflowResult(
+            status=WorkflowStatus.COMPLETED,
+            assistant_text=assistant,
+            language_code=language.language_code,
+            script=language.script,
+            intent=intent_result.intent.value,
+            intent_confidence=intent_result.confidence,
+            entities={**entities, "evidence_chars": len(evidence)},
+            citations=[
+                {
+                    "document_title": c.document_title,
+                    "document_version": c.document_version,
+                    "section_label": c.section_label,
+                    "chunk_id": str(c.chunk_id),
+                    "source_type": c.source_type,
+                    "score": c.score,
+                }
+                for c in retrieval.citations
+            ],
+            retrieval_strategy=retrieval.strategy.value,
+            retrieval_confidence=retrieval.confidence,
+            no_answer=False,
+            retrieval_trace_id=retrieval.trace_id,
+            suspicious_evidence=retrieval.suspicious_evidence,
+        )
+    return await _persist_trace(
+        db=db,
+        user=user,
+        conversation_id=conversation_id,
+        message_id=message_id,
+        request_id=request_id,
+        language=language,
+        intent_result=intent_result,
+        result=result,
+        started=started,
+    )
+
+
 INTENT_TO_TOOL: dict[Intent, str | None] = {
     Intent.GREETING: None,
     Intent.ORDER_STATUS: "get_order_status",
@@ -40,6 +184,7 @@ INTENT_TO_TOOL: dict[Intent, str | None] = {
     Intent.CREATE_SUPPORT_TICKET: "create_support_ticket",
     Intent.SUPPORT_TICKET_STATUS: "get_support_ticket_status",
     Intent.HUMAN_ESCALATION: "transfer_to_human",
+    Intent.POLICY_QUESTION: None,
     Intent.UNKNOWN: None,
 }
 
@@ -136,6 +281,21 @@ async def run_support_workflow(
             language=language,
             intent_result=intent_result,
             result=result,
+            started=started,
+        )
+
+    # Policy / knowledge retrieval (separate from tools)
+    if intent == Intent.POLICY_QUESTION:
+        return await _run_policy_retrieval(
+            db=db,
+            user=user,
+            conversation_id=conversation_id,
+            message_id=message_id,
+            text=text,
+            request_id=request_id,
+            language=language,
+            intent_result=intent_result,
+            entities=entities,
             started=started,
         )
 

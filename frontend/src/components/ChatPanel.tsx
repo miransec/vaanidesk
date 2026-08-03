@@ -27,7 +27,7 @@ export function ChatPanel() {
   const [bootError, setBootError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [providerNote, setProviderNote] = useState(
-    "Phase 2 controlled workflow (heuristic — not a production model)",
+    "Phase 3 controlled workflow + knowledge RAG (heuristic — not a production model)",
   );
   const [workflow, setWorkflow] = useState<WorkflowOut | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmationOut | null>(null);
@@ -170,7 +170,7 @@ export function ChatPanel() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-800">VaaniDesk</p>
         <h1 className="font-display text-3xl text-slate-900 md:text-4xl">Support chat</h1>
         <p className="text-sm text-slate-600">
-          Phase 2 demo auth via <code className="rounded bg-slate-100 px-1">X-Demo-User-Key</code>.
+          Phase 3 demo auth via <code className="rounded bg-slate-100 px-1">X-Demo-User-Key</code>.
           Not production authentication. API: {getApiBaseUrl()}
         </p>
         <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-950">{providerNote}</p>
@@ -232,6 +232,33 @@ export function ChatPanel() {
               {workflow.escalation_reason ? ` — ${workflow.escalation_reason}` : ""}
             </p>
           ) : null}
+          {workflow.retrieval_strategy ? (
+            <p>
+              Retrieval: <strong>{workflow.retrieval_strategy}</strong>
+              {workflow.retrieval_confidence != null
+                ? ` (${workflow.retrieval_confidence.toFixed(3)})`
+                : ""}
+            </p>
+          ) : null}
+          {workflow.no_answer ? (
+            <p className="sm:col-span-2 text-amber-900">
+              No-answer
+              {workflow.no_answer_reason ? ` — ${workflow.no_answer_reason}` : ""}
+            </p>
+          ) : null}
+          {workflow.citations && workflow.citations.length > 0 ? (
+            <div className="sm:col-span-2 space-y-1">
+              <p className="font-medium">Citations</p>
+              <ul className="text-xs">
+                {workflow.citations.map((c) => (
+                  <li key={c.chunk_id}>
+                    {c.document_title} v{c.document_version} · {c.section_label} ·{" "}
+                    {c.score.toFixed(3)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <label className="sm:col-span-2 flex items-center gap-2 text-xs text-slate-500">
             <input
               type="checkbox"
@@ -242,6 +269,16 @@ export function ChatPanel() {
           </label>
           {showDevDetails && workflow.trace_id ? (
             <p className="sm:col-span-2 font-mono text-xs">trace_id: {workflow.trace_id}</p>
+          ) : null}
+          {showDevDetails && workflow.retrieval_trace_id ? (
+            <p className="sm:col-span-2 font-mono text-xs">
+              retrieval_trace_id: {workflow.retrieval_trace_id}
+            </p>
+          ) : null}
+          {showDevDetails && workflow.suspicious_evidence ? (
+            <p className="sm:col-span-2 text-xs text-amber-800">
+              Advisory: suspicious evidence patterns flagged (data only — no tools executed).
+            </p>
           ) : null}
         </div>
       ) : null}
@@ -286,7 +323,8 @@ export function ChatPanel() {
       <div className="min-h-[320px] flex-1 space-y-3 rounded-lg border border-slate-200 bg-white/80 p-4">
         {messages.length === 0 ? (
           <p className="text-sm text-slate-500">
-            Try: where is my order VD-10001 · mera order VD-10001 kidhar hai · cancel order VD-10001
+            Try: where is my order VD-10001 · what is your return policy · warranty terms ·
+            cancel order VD-10001
           </p>
         ) : (
           messages.map((message) => (

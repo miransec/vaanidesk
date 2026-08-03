@@ -32,6 +32,15 @@ export type ConfirmationOut = {
   expires_at: string;
 };
 
+export type CitationOut = {
+  document_title: string;
+  document_version: number;
+  section_label: string;
+  chunk_id: string;
+  source_type: string;
+  score: number;
+};
+
 export type WorkflowOut = {
   status: string;
   detected_language?: string | null;
@@ -46,6 +55,13 @@ export type WorkflowOut = {
   escalation_reason?: string | null;
   trace_id?: string | null;
   confirmation?: ConfirmationOut | null;
+  citations?: CitationOut[];
+  retrieval_strategy?: string | null;
+  retrieval_confidence?: number | null;
+  no_answer?: boolean;
+  no_answer_reason?: string | null;
+  retrieval_trace_id?: string | null;
+  suspicious_evidence?: boolean;
 };
 
 export type ChatMessageResponse = {
@@ -174,4 +190,121 @@ export async function confirmAction(input: {
 
 export function getApiBaseUrl(): string {
   return API_URL;
+}
+
+export type KnowledgeDocument = {
+  id: string;
+  title: string;
+  source_type: string;
+  language: string;
+  is_active: boolean;
+  access_level: string;
+  current_version: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KnowledgeVersion = {
+  id: string;
+  document_id: string;
+  version_number: number;
+  content_hash: string;
+  original_filename: string | null;
+  mime_type: string;
+  processing_status: string;
+  is_active: boolean;
+  created_at: string;
+  chunk_count: number;
+};
+
+export type KnowledgeDocumentDetail = KnowledgeDocument & {
+  versions: KnowledgeVersion[];
+};
+
+export type RetrievalTestResponse = {
+  strategy: string;
+  confidence: number;
+  no_answer: boolean;
+  no_answer_reason?: string | null;
+  suspicious_evidence?: boolean;
+  latency_ms: number;
+  trace_id?: string | null;
+  citations: CitationOut[];
+  chunks: Array<{
+    chunk_id: string;
+    document_title: string;
+    document_version: number;
+    section_label: string;
+    text: string;
+    score: number;
+  }>;
+  candidate_chunk_ids: string[];
+  fused_scores: Record<string, number>;
+  embedding_disclaimer: string;
+};
+
+export async function listKnowledgeDocuments(demoKey: string): Promise<KnowledgeDocument[]> {
+  const res = await fetch(`${API_URL}/api/v1/knowledge/documents`, {
+    headers: { "X-Demo-User-Key": demoKey },
+    cache: "no-store",
+  });
+  return parseJson<KnowledgeDocument[]>(res);
+}
+
+export async function getKnowledgeDocument(
+  demoKey: string,
+  documentId: string,
+): Promise<KnowledgeDocumentDetail> {
+  const res = await fetch(`${API_URL}/api/v1/knowledge/documents/${documentId}`, {
+    headers: { "X-Demo-User-Key": demoKey },
+    cache: "no-store",
+  });
+  return parseJson<KnowledgeDocumentDetail>(res);
+}
+
+export async function ingestKnowledgeDocument(input: {
+  demoKey: string;
+  title: string;
+  content: string;
+  mimeType?: string;
+  language?: string;
+  accessLevel?: string;
+}): Promise<{ document_id: string; version_id: string; status: string; chunk_count?: number }> {
+  const res = await fetch(`${API_URL}/api/v1/knowledge/documents`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Demo-User-Key": input.demoKey,
+    },
+    body: JSON.stringify({
+      title: input.title,
+      content: input.content,
+      mime_type: input.mimeType ?? "text/markdown",
+      language: input.language ?? "en",
+      access_level: input.accessLevel ?? "authenticated",
+      activate: true,
+    }),
+  });
+  return parseJson(res);
+}
+
+export async function testRetrieval(input: {
+  demoKey: string;
+  query: string;
+  strategy: string;
+}): Promise<RetrievalTestResponse> {
+  const res = await fetch(`${API_URL}/api/v1/knowledge/retrieval/test`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Demo-User-Key": input.demoKey,
+    },
+    body: JSON.stringify({
+      query: input.query,
+      strategy: input.strategy,
+      top_k: 5,
+      persist_trace: true,
+    }),
+  });
+  return parseJson<RetrievalTestResponse>(res);
 }

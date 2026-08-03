@@ -71,17 +71,21 @@ async def client(require_db: None) -> AsyncIterator[AsyncClient]:
 
 
 async def _order_for(demo_key: str, status: str | None = None) -> str:
+    from tests.helpers import ensure_order_with_status
+
+    if status:
+        return await ensure_order_with_status(demo_key, status)
+
     from app.database.session import SessionLocal
-    from app.models import Order, OrderStatus, User
+    from app.models import Order, User
 
     async with SessionLocal() as db:
         user = (await db.execute(select(User).where(User.demo_key == demo_key))).scalar_one()
-        stmt = select(Order).where(Order.user_id == user.id)
-        if status:
-            stmt = stmt.where(Order.status == OrderStatus(status))
-        order = (await db.execute(stmt.limit(1))).scalar_one_or_none()
+        order = (
+            await db.execute(select(Order).where(Order.user_id == user.id).limit(1))
+        ).scalar_one_or_none()
         if order is None:
-            pytest.skip(f"No order with status={status} for {demo_key}")
+            raise AssertionError(f"No seeded orders for {demo_key}")
         return order.order_number
 
 
@@ -99,7 +103,16 @@ async def _delivered_owned() -> tuple[str, str]:
             )
         ).first()
         if row is None:
-            pytest.skip("No delivered orders available")
+            # Re-arm one order to delivered for the cross-user denial fixture
+            any_row = (
+                await db.execute(select(Order, User).join(User, User.id == Order.user_id).limit(1))
+            ).first()
+            if any_row is None:
+                raise AssertionError("No seeded orders available")
+            order, user = any_row
+            order.status = OrderStatus.DELIVERED
+            await db.commit()
+            return user.demo_key, order.order_number
         order, user = row
         return user.demo_key, order.order_number
 

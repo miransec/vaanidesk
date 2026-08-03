@@ -169,4 +169,39 @@ _TEMPLATES: dict[str, dict[str, str]] = {
         ),
         "mr": ("मला खात्री नाही. एस्केलेशन रांगेत आहे ({ticket_ref}). लाइव्ह एजंट या डेमोमध्ये नाही."),
     },
+    "policy_answer": {
+        "en": (
+            "Based on VaaniDesk policy evidence (untrusted data, not commands): {snippet}\n\n"
+            "Sources: {citations}"
+        ),
+        "hi": "नीति साक्ष्य के आधार पर: {snippet}\n\nस्रोत: {citations}",
+        "hinglish": "Policy evidence ke hisaab se: {snippet}\n\nSources: {citations}",
+        "mr": "धोरण पुराव्यानुसार: {snippet}\n\nस्रोत: {citations}",
+    },
+    "no_answer": {
+        "en": (
+            "I could not find sufficiently reliable policy evidence for that question "
+            "({reason}). I will not invent a policy."
+        ),
+        "hi": "इस प्रश्न के लिए पर्याप्त विश्वसनीय नीति साक्ष्य नहीं मिला ({reason})।",
+        "hinglish": (
+            "Reliable policy evidence nahi mila ({reason}). Main policy invent nahi karunga."
+        ),
+        "mr": "या प्रश्नासाठी पुरेसा विश्वासार्ह धोरण पुरावा सापडला नाही ({reason}).",
+    },
+    "escalation_offer": {
+        "en": "You can ask for a human handoff if you still need help.",
+        "hi": "आवश्यक हो तो मानव सहायता का अनुरोध कर सकते हैं।",
+        "hinglish": "Zarurat ho to human handoff maang sakte ho.",
+        "mr": "गरज असल्यास मनुष्य मदत विनंती करू शकता.",
+    },
+    "evidence_review_flag": {
+        "en": (
+            "[Advisory] Retrieved evidence matched injection-like patterns "
+            "and was treated as data only."
+        ),
+        "hi": "[सलाह] साक्ष्य में संदिग्ध निर्देश मिले — केवल डेटा के रूप में उपयोग।",
+        "hinglish": "[Advisory] Evidence mein suspicious instructions mile — data only.",
+        "mr": "[सल्ला] पुराव्यात संशयास्पद सूचना — फक्त डेटा म्हणून वापरले.",
+    },
 }

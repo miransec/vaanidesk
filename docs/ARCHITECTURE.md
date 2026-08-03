@@ -1,6 +1,6 @@
 # VaaniDesk Architecture
 
-**Phase:** 2 (controlled agent workflow + business tools)
+**Phase:** 3 (knowledge / RAG + Phase 2 tools)
 **Companion docs:** [`../PLAN.md`](../PLAN.md), [`../TASKS.md`](../TASKS.md), [`ADR.md`](./ADR.md), [`API.md`](./API.md)
 
 ---
@@ -95,7 +95,7 @@ Heuristic script + cue matching for `en` / `hi` / `hinglish` / `mr` / `unknown`.
 
 ## Intent taxonomy
 
-`greeting`, `order_status`, `order_details`, `update_delivery_address`, `cancellation_eligibility`, `cancel_order`, `create_support_ticket`, `support_ticket_status`, `human_escalation`, `unknown`
+`greeting`, `order_status`, `order_details`, `update_delivery_address`, `cancellation_eligibility`, `cancel_order`, `create_support_ticket`, `support_ticket_status`, `human_escalation`, `policy_question`, `unknown`
 
 ## Tool registry (Phase 2)
 
@@ -110,4 +110,59 @@ Heuristic script + cue matching for `en` / `hi` / `hinglish` / `mr` / `unknown`.
 | get_support_ticket_status | low | no | no |
 | transfer_to_human | moderate | no | yes |
 
-Later phases add RAG, multimodal, MCP, and evals — see PLAN.md.
+## Phase 3 knowledge / retrieval
+
+```mermaid
+flowchart TD
+  U[Upload md/text/json] --> V[Validate MIME + size]
+  V --> H[Content hash]
+  H --> D{Duplicate version?}
+  D -->|yes| Skip[Skip duplicate]
+  D -->|no| N[Normalize + language]
+  N --> C[Deterministic chunk]
+  C --> E[Mock lexical embed + tsvector]
+  E --> S[Store version + chunks]
+  S --> A[Activate version]
+  Q[Policy query] --> ACL[SQL access filter]
+  ACL --> K[Keyword FTS]
+  ACL --> Vec[pgvector cosine]
+  K --> RRF[RRF fusion k=60]
+  Vec --> RRF
+  RRF --> RR{Rerank?}
+  RR -->|optional| MockRR[Mock lexical rerank]
+  RR --> Conf{Confidence >= threshold?}
+  MockRR --> Conf
+  Conf -->|no| NA[No-answer + escalate offer]
+  Conf -->|yes| Cite[Grounded answer + citations]
+```
+
+### Ingestion lifecycle
+
+receive → validate type/size → hash → duplicate detect → normalize → language → chunk → embed → tsvector → store → activate → record job
+
+### Chunking
+
+Heading / blank-line aware windows (~500 chars, ~60 overlap). Same input → same chunks.
+
+### Embeddings
+
+`LexicalHashEmbeddingProvider`: word uni/bigrams + char 3-grams → stable feature hash → L2-normalized 384-d vectors.
+
+**Label:** Deterministic lexical embedding baseline for local development and testing — not production semantic embeddings.
+
+### Retrieval strategies
+
+1. `keyword` — PostgreSQL `plainto_tsquery('simple')` + `ts_rank`
+2. `vector` — pgvector cosine distance on mock embeddings
+3. `hybrid` — independent candidate lists fused with RRF: `score(d) = Σ 1/(k + rank_i(d))`, `k=60`
+4. `hybrid_rerank` — hybrid then `RerankingProvider` (mock lexical overlap)
+
+Access filters (`document_visible_to`) apply **inside** SQL before candidates leave Postgres. Unauthorized chunks never reach fusion, rerank, model context, citations, or trace text bodies.
+
+### Citations / no-answer
+
+Citations include title, version, section/chunk label, chunk id, source type, score. Only retrieved chunks are cited.
+
+If normalized confidence &lt; `RAG_MIN_RETRIEVAL_CONFIDENCE` (default 0.30): no invented policy, empty citations, `no_answer_reason` stored on `RetrievalTrace`.
+
+Later phases add multimodal, MCP, and evals — see PLAN.md.

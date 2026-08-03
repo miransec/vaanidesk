@@ -39,10 +39,11 @@ services:
       LLM_PROVIDER: mock
       CORS_ORIGINS: http://localhost:3000
       DEMO_MODE: "true"
+      KNOWLEDGE_SEED_DIR: /sample_data/policies
     ports:
       - "8000:8000"
     volumes:
-      - ./sample_data:/app/sample_data:ro
+      - ./sample_data:/sample_data:ro
     depends_on:
       postgres:
         condition: service_healthy

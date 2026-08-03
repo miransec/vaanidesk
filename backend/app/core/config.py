@@ -58,10 +58,15 @@ class Settings(BaseSettings):
 
     demo_mode: bool = True
     seed_on_startup: bool = False
+    # Directory containing policies/manifest.json. Empty/unset → host repo fallback.
+    # Compose sets /sample_data/policies with ./sample_data mounted at /sample_data.
+    knowledge_seed_dir: str | None = None
 
     confirmation_token_ttl_seconds: int = 600
     idempotency_record_ttl_days: int = 30
     agent_confidence_escalate_threshold: float = 0.45
+    rag_min_retrieval_confidence: float = 0.30
+    max_knowledge_upload_bytes: int = 512000
 
     def cors_origin_list(self) -> list[str]:
         return _split_csv(self.cors_origins)

@@ -2,7 +2,7 @@
 
 **Tagline:** Multilingual AI support across chat, voice and images
 **Portfolio target:** Puch AI engineering application
-**Phase status:** Phase 2 agent/tools implemented — awaiting review before Phase 3 (RAG).
+**Phase status:** Phase 3 knowledge/RAG implemented — awaiting review before Phase 4.
 
 **Default Git branch:** `main` (rename from empty-repo `master` before first commit)
 
