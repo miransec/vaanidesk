@@ -65,7 +65,8 @@ Do not store secrets in this file.
 - No production voice provider credentials needed
 
 ### Commit / tag
-- Commit/tag filled after `git commit` / `git tag`
+- Commit: `0e05e4c` — `feat: complete VaaniDesk phase 4 secure multilingual voice`
+- Tag: `phase-4-complete`
 
 ---
 
