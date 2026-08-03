@@ -2,7 +2,7 @@
 
 **Tagline:** Multilingual AI support across chat, voice and images
 **Portfolio target:** Puch AI engineering application
-**Phase status:** Phase 3 knowledge/RAG implemented — awaiting review before Phase 4.
+**Phase status:** Phase 4 secure multilingual voice complete (86 tests, 0 skipped). Phase 5 (MCP) not started.
 
 **Default Git branch:** `main` (rename from empty-repo `master` before first commit)
 
@@ -362,9 +362,11 @@ UUIDs, timestamps, indexes; order access scoped by `user_id`.
 - Lexical mock vectors documented as non-semantic; real embeds optional
 - Doc-injection cannot force unrelated tools
 
-### Phase 4 — Voice and images
+### Phase 4 — Voice and images ✓
 
-- Valid media processed; invalid rejected; mock labeled; no overclaim on legal/refund decisions
+- [x] Valid media processed; invalid rejected; mock labeled; no overclaim on legal/refund decisions
+- [x] Voice transport into existing orchestrator; mock STT/TTS; local audio storage; transcript confirmation
+- [x] 86 tests passed, 0 skipped; quality gates green
 
 ### Phase 5 — MCP (Puch-compatible)
 

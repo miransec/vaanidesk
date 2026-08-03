@@ -1,0 +1,76 @@
+# Overlay for reproducible CI / local test runs.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm backend-test uv run pytest -rs
+# Does NOT modify development volumes (uses isolated DB/Redis/storage).
+
+services:
+  postgres-test:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: vaanidesk_test
+      POSTGRES_PASSWORD: vaanidesk_test_password
+      POSTGRES_DB: vaanidesk_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vaanidesk_test -d vaanidesk_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  redis-test:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: test
+    environment:
+      APP_ENV: test
+      DEBUG: "false"
+      SECRET_KEY: test-only-not-for-production
+      DATABASE_URL: postgresql+asyncpg://vaanidesk_test:vaanidesk_test_password@postgres-test:5432/vaanidesk_test
+      REDIS_URL: redis://redis-test:6379/1
+      LLM_PROVIDER: mock
+      STT_PROVIDER: mock
+      TTS_PROVIDER: mock
+      DEMO_MODE: "true"
+      VOICE_ENABLED: "true"
+      AUDIO_STORAGE_DIR: /tmp/vaanidesk-test-audio
+      KNOWLEDGE_SEED_DIR: /sample_data/policies
+    volumes:
+      - ./sample_data:/sample_data:ro
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    working_dir: /app
+    # Override production CMD; caller supplies test command
+    entrypoint: ["uv", "run"]
+    command: ["pytest", "-rs"]
+
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: deps
+    working_dir: /app
+    volumes:
+      - ./frontend/package.json:/app/package.json:ro
+      - ./frontend/package-lock.json:/app/package-lock.json:ro
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+      - ./frontend/next.config.ts:/app/next.config.ts:ro
+      - ./frontend/tsconfig.json:/app/tsconfig.json:ro
+      - ./frontend/eslint.config.mjs:/app/eslint.config.mjs:ro
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    entrypoint: ["npm", "run"]
+    command: ["lint"]

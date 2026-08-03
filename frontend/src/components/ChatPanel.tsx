@@ -1,21 +1,32 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ConfirmationOut,
   DemoUser,
   MessageOut,
+  VoiceMessageOut,
   WorkflowOut,
   confirmAction,
+  confirmTranscript,
+  editTranscript,
   getApiBaseUrl,
+  getAudioDownloadUrl,
   getConversation,
   listConversations,
   listDemoUsers,
+  requestTts,
   sendMessage,
+  submitTranscript,
+  transcribe,
+  uploadAudio,
 } from "@/lib/api";
 
-type ChatRow = MessageOut & { providerLabel?: string };
+type ChatRow = MessageOut & {
+  providerLabel?: string;
+  synthesisId?: string | null;
+};
 
 export function ChatPanel() {
   const [users, setUsers] = useState<DemoUser[]>([]);
@@ -27,16 +38,29 @@ export function ChatPanel() {
   const [bootError, setBootError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [providerNote, setProviderNote] = useState(
-    "Phase 3 controlled workflow + knowledge RAG (heuristic — not a production model)",
+    "Phase 4 demo — controlled workflow + knowledge RAG + mock voice (not production STT/TTS)",
   );
   const [workflow, setWorkflow] = useState<WorkflowOut | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmationOut | null>(null);
   const [showDevDetails, setShowDevDetails] = useState(false);
 
+  const [voiceMessage, setVoiceMessage] = useState<VoiceMessageOut | null>(null);
+  const [transcriptDraft, setTranscriptDraft] = useState("");
+  const [recording, setRecording] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const selectedUser = useMemo(
     () => users.find((u) => u.demo_key === demoKey) ?? null,
     [users, demoKey],
   );
+
+  const canUseMediaRecorder =
+    typeof window !== "undefined" &&
+    typeof MediaRecorder !== "undefined" &&
+    Boolean(navigator.mediaDevices?.getUserMedia);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,6 +123,177 @@ export function ChatPanel() {
     }
     setWorkflow(next);
     setPendingConfirmation(next.confirmation ?? null);
+  }
+
+  function resetVoiceReview() {
+    setVoiceMessage(null);
+    setTranscriptDraft("");
+  }
+
+  function syncVoiceState(vm: VoiceMessageOut) {
+    setVoiceMessage(vm);
+    setTranscriptDraft(vm.transcript ?? "");
+    if (vm.conversation_id) {
+      setConversationId(vm.conversation_id);
+    }
+  }
+
+  async function processVoiceBlob(blob: Blob, filename: string) {
+    setVoiceBusy(true);
+    setSendError(null);
+    resetVoiceReview();
+    try {
+      const uploaded = await uploadAudio({
+        demoKey,
+        file: blob,
+        filename,
+        conversationId,
+      });
+      syncVoiceState(uploaded.voice_message);
+      setProviderNote(uploaded.provider.disclaimer);
+
+      const tx = await transcribe({
+        demoKey,
+        voiceMessageId: uploaded.voice_message.id,
+        autoSubmit: false,
+      });
+      syncVoiceState(tx.voice_message);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Voice upload failed");
+    } finally {
+      setVoiceBusy(false);
+    }
+  }
+
+  async function onFileSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || voiceBusy) return;
+    await processVoiceBlob(file, file.name || "upload.wav");
+  }
+
+  async function startRecording() {
+    if (!canUseMediaRecorder || recording || voiceBusy) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        await processVoiceBlob(blob, "recording.webm");
+        setRecording(false);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Microphone access denied");
+    }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+  }
+
+  async function onConfirmTranscript() {
+    if (!voiceMessage?.transcript_hash || voiceBusy) return;
+    setVoiceBusy(true);
+    setSendError(null);
+    try {
+      const edited =
+        transcriptDraft.trim() !== (voiceMessage.transcript ?? "").trim()
+          ? await editTranscript({
+              demoKey,
+              voiceMessageId: voiceMessage.id,
+              transcript: transcriptDraft.trim(),
+            })
+          : null;
+      const vm = edited?.voice_message ?? voiceMessage;
+      const confirmed = await confirmTranscript({
+        demoKey,
+        voiceMessageId: vm.id,
+        transcriptHash: vm.transcript_hash ?? voiceMessage.transcript_hash,
+      });
+      syncVoiceState(confirmed.voice_message);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Transcript confirm failed");
+    } finally {
+      setVoiceBusy(false);
+    }
+  }
+
+  async function onSubmitTranscript() {
+    if (!voiceMessage || voiceBusy) return;
+    setVoiceBusy(true);
+    setSendError(null);
+    try {
+      let vm = voiceMessage;
+      if (transcriptDraft.trim() !== (voiceMessage.transcript ?? "").trim()) {
+        const edited = await editTranscript({
+          demoKey,
+          voiceMessageId: voiceMessage.id,
+          transcript: transcriptDraft.trim(),
+        });
+        vm = edited.voice_message;
+        syncVoiceState(vm);
+      }
+      if (!vm.transcript_confirmed_at && vm.transcript_hash) {
+        const confirmed = await confirmTranscript({
+          demoKey,
+          voiceMessageId: vm.id,
+          transcriptHash: vm.transcript_hash,
+        });
+        vm = confirmed.voice_message;
+        syncVoiceState(vm);
+      }
+      const result = await submitTranscript({
+        demoKey,
+        voiceMessageId: vm.id,
+        transcriptHash: vm.transcript_hash,
+      });
+      syncVoiceState(result.voice_message);
+      if (result.user_message && result.assistant_message) {
+        setMessages((prev) => [
+          ...prev,
+          result.user_message!,
+          {
+            ...result.assistant_message!,
+            providerLabel: `${result.provider.provider}/${result.provider.model}`,
+          },
+        ]);
+      }
+      applyWorkflow(result.workflow);
+      setProviderNote(result.provider.disclaimer ?? providerNote);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Voice submit failed");
+    } finally {
+      setVoiceBusy(false);
+    }
+  }
+
+  async function onPlayTts(messageId: string, rowIndex: number) {
+    setVoiceBusy(true);
+    setSendError(null);
+    try {
+      const synth = await requestTts({ demoKey, messageId, language: workflow?.detected_language });
+      setMessages((prev) =>
+        prev.map((m, i) => (i === rowIndex ? { ...m, synthesisId: synth.id } : m)),
+      );
+      const url = getAudioDownloadUrl("synthesis", synth.id);
+      const res = await fetch(url, { headers: { "X-Demo-User-Key": demoKey } });
+      if (!res.ok) throw new Error(`Playback failed (${res.status})`);
+      const blob = await res.blob();
+      const audio = new Audio(URL.createObjectURL(blob));
+      await audio.play();
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "TTS playback failed");
+    } finally {
+      setVoiceBusy(false);
+    }
   }
 
   async function onSubmit(event: FormEvent) {
@@ -170,7 +365,7 @@ export function ChatPanel() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-800">VaaniDesk</p>
         <h1 className="font-display text-3xl text-slate-900 md:text-4xl">Support chat</h1>
         <p className="text-sm text-slate-600">
-          Phase 3 demo auth via <code className="rounded bg-slate-100 px-1">X-Demo-User-Key</code>.
+          Phase 4 demo auth via <code className="rounded bg-slate-100 px-1">X-Demo-User-Key</code>.
           Not production authentication. API: {getApiBaseUrl()}
         </p>
         <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-950">{providerNote}</p>
@@ -187,8 +382,10 @@ export function ChatPanel() {
               setMessages([]);
               setWorkflow(null);
               setPendingConfirmation(null);
+              resetVoiceReview();
               setDemoKey(e.target.value);
             }}
+            aria-label="Demo user"
           >
             {users.map((user) => (
               <option key={user.id} value={user.demo_key}>
@@ -205,6 +402,113 @@ export function ChatPanel() {
           </p>
         ) : null}
       </div>
+
+      <section
+        className="space-y-3 rounded-md border border-violet-200 bg-violet-50/60 px-4 py-3"
+        aria-label="Voice input"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded bg-violet-200 px-2 py-0.5 text-xs font-medium text-violet-950">
+            Mock STT/TTS
+          </span>
+          <p className="text-sm text-violet-950">Upload audio or record (when supported).</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <label className="cursor-pointer rounded-md border border-violet-300 bg-white px-3 py-2 text-sm text-violet-950 hover:bg-violet-50">
+            Upload audio
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*,.wav,.mp3,.webm,.m4a"
+              className="sr-only"
+              aria-label="Upload audio file"
+              disabled={voiceBusy || Boolean(bootError)}
+              onChange={onFileSelected}
+            />
+          </label>
+          {canUseMediaRecorder ? (
+            recording ? (
+              <button
+                type="button"
+                className="rounded-md bg-rose-700 px-3 py-2 text-sm text-white disabled:opacity-50"
+                aria-label="Stop recording"
+                disabled={voiceBusy}
+                onClick={stopRecording}
+              >
+                Stop recording
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="rounded-md border border-violet-400 bg-white px-3 py-2 text-sm text-violet-950 disabled:opacity-50"
+                aria-label="Start voice recording"
+                disabled={voiceBusy || Boolean(bootError)}
+                onClick={startRecording}
+              >
+                Record
+              </button>
+            )
+          ) : null}
+        </div>
+
+        {voiceMessage ? (
+          <div className="space-y-2 rounded-md border border-violet-200 bg-white p-3 text-sm">
+            <div className="flex flex-wrap gap-3 text-xs text-slate-600">
+              <span>
+                Status: <strong>{voiceMessage.transcription_status}</strong>
+              </span>
+              {voiceMessage.detected_language ? (
+                <span>
+                  Language: <strong>{voiceMessage.detected_language}</strong>
+                </span>
+              ) : null}
+              {voiceMessage.transcript_confidence != null ? (
+                <span>
+                  Confidence:{" "}
+                  <strong>{voiceMessage.transcript_confidence.toFixed(2)}</strong>
+                </span>
+              ) : null}
+              {voiceMessage.can_auto_submit ? (
+                <span className="text-emerald-700">Auto-submit eligible</span>
+              ) : null}
+            </div>
+            <label className="flex flex-col gap-1 text-slate-700">
+              Transcript review
+              <textarea
+                className="min-h-[80px] rounded-md border border-slate-300 px-2 py-2 text-slate-900"
+                value={transcriptDraft}
+                onChange={(e) => setTranscriptDraft(e.target.value)}
+                aria-label="Edit transcript"
+                disabled={Boolean(voiceMessage.submitted_at) || voiceBusy}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm disabled:opacity-50"
+                aria-label="Confirm transcript"
+                disabled={
+                  voiceBusy ||
+                  !voiceMessage.transcript_hash ||
+                  Boolean(voiceMessage.submitted_at)
+                }
+                onClick={onConfirmTranscript}
+              >
+                Confirm transcript
+              </button>
+              <button
+                type="button"
+                className="rounded-md bg-violet-800 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                aria-label="Submit transcript to workflow"
+                disabled={voiceBusy || Boolean(voiceMessage.submitted_at)}
+                onClick={onSubmitTranscript}
+              >
+                Submit to workflow
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </section>
 
       {workflow ? (
         <div className="grid gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 sm:grid-cols-2">
@@ -264,6 +568,7 @@ export function ChatPanel() {
               type="checkbox"
               checked={showDevDetails}
               onChange={(e) => setShowDevDetails(e.target.checked)}
+              aria-label="Show developer details"
             />
             Developer details
           </label>
@@ -294,6 +599,7 @@ export function ChatPanel() {
               disabled={loading}
               onClick={() => onConfirm(true)}
               className="rounded-md bg-teal-800 px-3 py-2 text-white disabled:opacity-50"
+              aria-label="Approve confirmation"
             >
               Approve
             </button>
@@ -302,6 +608,7 @@ export function ChatPanel() {
               disabled={loading}
               onClick={() => onConfirm(false)}
               className="rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-800 disabled:opacity-50"
+              aria-label="Deny confirmation"
             >
               Deny
             </button>
@@ -324,10 +631,10 @@ export function ChatPanel() {
         {messages.length === 0 ? (
           <p className="text-sm text-slate-500">
             Try: where is my order VD-10001 · what is your return policy · warranty terms ·
-            cancel order VD-10001
+            cancel order VD-10001 · or upload a WAV for mock voice
           </p>
         ) : (
-          messages.map((message) => (
+          messages.map((message, index) => (
             <div
               key={message.id}
               className={`max-w-[90%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
@@ -340,6 +647,17 @@ export function ChatPanel() {
               <p className="whitespace-pre-wrap">{message.content}</p>
               {message.providerLabel ? (
                 <p className="mt-1 text-[10px] opacity-60">{message.providerLabel}</p>
+              ) : null}
+              {message.role === "assistant" ? (
+                <button
+                  type="button"
+                  className="mt-2 rounded border border-slate-300 bg-white px-2 py-0.5 text-[10px] text-slate-700 disabled:opacity-50"
+                  aria-label="Play assistant reply with mock TTS"
+                  disabled={voiceBusy}
+                  onClick={() => onPlayTts(message.id, index)}
+                >
+                  {message.synthesisId ? "Replay mock TTS" : "Play mock TTS"}
+                </button>
               ) : null}
             </div>
           ))
@@ -359,6 +677,7 @@ export function ChatPanel() {
           type="submit"
           disabled={loading || Boolean(bootError) || !input.trim()}
           className="rounded-md bg-teal-800 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          aria-label="Send message"
         >
           {loading ? "Sending…" : "Send"}
         </button>

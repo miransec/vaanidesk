@@ -113,3 +113,38 @@ async def delete_test_knowledge_documents() -> int:
 
 def test_title(label: str) -> str:
     return f"{TEST_KNOWLEDGE_TITLE_PREFIX}{label} {uuid4().hex[:8]}"
+
+
+TEST_VOICE_REQUEST_PREFIX = "vdtest-voice-"
+
+
+async def delete_test_voice_artifacts(
+    *,
+    voice_message_ids: list | None = None,
+    request_id_prefix: str = TEST_VOICE_REQUEST_PREFIX,
+) -> int:
+    """Remove voice rows created by Phase 4 tests. Returns deleted voice message count."""
+    from uuid import UUID
+
+    from app.database.session import SessionLocal
+    from app.models import SpeechSynthesis, VoiceMessage, VoiceTrace
+
+    removed = 0
+    async with SessionLocal() as db:
+        if voice_message_ids:
+            ids = [UUID(str(v)) for v in voice_message_ids]
+            await db.execute(delete(VoiceTrace).where(VoiceTrace.voice_message_id.in_(ids)))
+            await db.execute(
+                delete(SpeechSynthesis).where(
+                    SpeechSynthesis.message_id.in_(
+                        select(VoiceMessage.message_id).where(VoiceMessage.id.in_(ids))
+                    )
+                )
+            )
+            result = await db.execute(delete(VoiceMessage).where(VoiceMessage.id.in_(ids)))
+            removed = result.rowcount or 0
+        await db.execute(
+            delete(VoiceTrace).where(VoiceTrace.request_id.like(f"{request_id_prefix}%"))
+        )
+        await db.commit()
+    return removed

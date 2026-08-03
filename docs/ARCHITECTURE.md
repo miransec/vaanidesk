@@ -1,6 +1,6 @@
 # VaaniDesk Architecture
 
-**Phase:** 3 (knowledge / RAG + Phase 2 tools)
+**Phase:** 4 (voice transport + knowledge/RAG + tools)
 **Companion docs:** [`../PLAN.md`](../PLAN.md), [`../TASKS.md`](../TASKS.md), [`ADR.md`](./ADR.md), [`API.md`](./API.md)
 
 ---
@@ -165,4 +165,45 @@ Citations include title, version, section/chunk label, chunk id, source type, sc
 
 If normalized confidence &lt; `RAG_MIN_RETRIEVAL_CONFIDENCE` (default 0.30): no invented policy, empty citations, `no_answer_reason` stored on `RetrievalTrace`.
 
-Later phases add multimodal, MCP, and evals — see PLAN.md.
+Later phases add MCP and evals — see PLAN.md.
+
+---
+
+## Phase 4 voice transport
+
+```mermaid
+flowchart TD
+  Mic[Browser mic / file upload] --> Val[Validate format + size + duration]
+  Val -->|invalid| Rej[400 rejection]
+  Val -->|ok| Store[AudioStorage local FS]
+  Store --> STT[DeterministicMockSTT]
+  STT --> Conf{Confidence >= threshold?}
+  Conf -->|high + non-sensitive| Auto[Auto-submit to orchestrator]
+  Conf -->|low or sensitive| Show[Display transcript for confirmation]
+  Show --> Edit[User may edit]
+  Edit --> Bind[Confirm: bind transcript hash]
+  Bind --> Sub[Submit confirmed text to orchestrator]
+  Sub --> Resp[Orchestrator response]
+  Resp --> TTS[DeterministicMockTTS]
+  TTS --> Play[Audio playback to client]
+```
+
+### Voice module layout
+
+```text
+backend/app/voice/
+├── __init__.py
+├── stt.py            # DeterministicMockSTT provider
+├── tts.py            # DeterministicMockTTS provider
+├── validation.py     # format/size/duration checks
+├── storage.py        # AudioStorage (local FS, retention cleanup)
+└── rate_limit.py     # per-user voice rate limiting
+```
+
+### Key design decisions
+
+- Voice is a **transport** — audio becomes text that enters the same controlled orchestrator
+- Transcript confirmation prevents accidental sensitive-action execution from mis-transcription
+- Rate limiting: uploads/min, bytes/hour, STT requests/min, TTS requests/min, max concurrent jobs
+- Audio retention is time-bounded (`AUDIO_RETENTION_HOURS`); cleanup endpoint removes expired files
+- No raw audio stored in agent traces — only transcript text and metadata

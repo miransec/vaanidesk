@@ -40,9 +40,21 @@ Protect customer data isolation, prevent unauthorized tool execution, contain pr
 | Optional caches | Degrade |
 | Confirmation tokens | **Fail closed** |
 
+## Phase 4 voice controls
+
+| Control | Behavior |
+|---------|----------|
+| Audio ownership | Voice messages scoped to authenticated user; download/delete require ownership |
+| Transcript confirmation | Sensitive intents require explicit transcript hash binding before submission |
+| No raw audio in traces | Agent traces store transcript text and metadata only — never raw audio bytes |
+| Rate limiting | Per-user: uploads/min, bytes/hour, STT reqs/min, TTS reqs/min, max concurrent jobs |
+| Format validation | Only allowed MIME types (`wav`, `mp3`, `webm`, `m4a`); size and duration caps enforced |
+| Storage retention | Audio files expire after `AUDIO_RETENTION_HOURS`; cleanup endpoint removes stale files |
+| Edit invalidation | Editing a transcript invalidates prior confirmation — re-confirmation required |
+
 ## Verification
 
-Phase 2 security suite remains green. Phase 3 adds cross-user restricted-doc denial, reranker isolation, malicious-doc tool non-execution, citation integrity, and multilingual policy chat tests.
+Phase 2 security suite remains green. Phase 3 adds cross-user restricted-doc denial, reranker isolation, malicious-doc tool non-execution, citation integrity, and multilingual policy chat tests. Phase 4 adds voice upload ownership, transcript confirmation for sensitive actions, rate limit enforcement, and audio retention/cleanup.
 
 ---
 

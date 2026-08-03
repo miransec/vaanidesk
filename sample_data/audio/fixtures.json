@@ -1,0 +1,20 @@
+{
+  "fixtures": [
+    "en",
+    "hi",
+    "mr",
+    "hinglish",
+    "low_confidence",
+    "unknown"
+  ],
+  "hash_to_fixture": {
+    "352b9bd41553ac92a191d383a178c75315b6d0b4994ae14267593624912243b4": "en",
+    "0bff657c231f1fba1e03fc37897d5bff422421844f98762fa6233f0a5fd74797": "hi",
+    "ac968cc3c6e129a5736d2f43be5eb367f8e88cd18e523469a2341e37ebe616d7": "mr",
+    "f15b7115fc39d33ac3421c342fd4f6cde39b39385f7f677b7dbd342b48a47eaa": "hinglish",
+    "4073a20237292ad774db67fb8291b29641faab2dc2896430840ee5b2ae366bfa": "low_confidence",
+    "1923a276adea6d8b5261ebddcf8bb9ea2c910062d54d044a1e6f46848123120b": "unknown"
+  },
+  "malformed_file": "malformed.wav",
+  "note": "Deterministic mock STT maps content hashes to fixture keys."
+}

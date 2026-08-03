@@ -206,3 +206,27 @@ Finalized decisions for VaaniDesk. Narrative context remains in [`PLAN.md`](../P
 **Decision:** Policy corpus text is never treated as instructions. Evidence is wrapped with an explicit DATA preamble; advisory injection patterns may flag review; tools remain on a separate allow-listed path from RAG.
 **Why:** Contain prompt-injection from malicious or compromised documents without claiming a perfect scanner.
 
+---
+
+## ADR-026 — Voice as transport with mock STT/TTS default
+
+**Status:** Accepted
+**Decision:** Voice is treated as a **transport layer** into the existing controlled orchestrator — not a separate agent or workflow. Audio is transcribed (STT), the resulting text enters the same intent/tool/RAG pipeline, and the response is optionally synthesized back (TTS). Default providers are `DeterministicMockSTT` and `DeterministicMockTTS` (deterministic fixtures, no network calls, clearly labeled as non-production).
+**Why:** Reuses all existing AuthZ, confirmation, and safety controls without duplication. Mock default keeps demo fully offline and reproducible; real providers (Whisper, Azure, etc.) slot in via `STT_PROVIDER`/`TTS_PROVIDER` env vars.
+
+---
+
+## ADR-027 — Transcript confirmation before sensitive submit
+
+**Status:** Accepted
+**Decision:** When a voice transcript would trigger a sensitive/high-risk intent, the system requires the user to explicitly confirm the transcript text (binding a SHA-256 hash) before submission to the orchestrator. Editing a transcript invalidates prior confirmation.
+**Why:** STT can mis-transcribe; a wrong word could trigger an irreversible action (e.g., cancel order). Confirmation gate prevents accidental destructive operations from speech recognition errors.
+
+---
+
+## ADR-028 — Local audio storage with bounded retention
+
+**Status:** Accepted
+**Decision:** Audio files are stored on local filesystem (`AUDIO_STORAGE_DIR`) with configurable retention (`AUDIO_RETENTION_HOURS`). A cleanup endpoint removes expired files. No S3 integration required for demo mode. Raw audio bytes never appear in agent traces or logs.
+**Why:** Simple local-first approach for portfolio demo; avoids cloud storage dependencies. Retention bounds prevent unbounded disk growth. Excluding audio from traces protects user privacy and keeps trace payloads manageable.
+

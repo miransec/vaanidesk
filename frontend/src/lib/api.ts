@@ -308,3 +308,220 @@ export async function testRetrieval(input: {
   });
   return parseJson<RetrievalTestResponse>(res);
 }
+
+// --- Phase 4 voice ---
+
+export type VoiceProviderOut = {
+  provider: string;
+  is_mock: boolean;
+  disclaimer: string;
+};
+
+export type VoiceMessageOut = {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  message_id: string | null;
+  requested_language: string | null;
+  detected_language: string | null;
+  original_filename: string | null;
+  mime_type: string;
+  audio_format: string;
+  duration_ms: number | null;
+  size_bytes: number;
+  content_hash: string;
+  transcription_status: string;
+  transcript: string | null;
+  transcript_confidence: number | null;
+  transcript_hash: string | null;
+  transcript_confirmed_at: string | null;
+  submitted_at: string | null;
+  auto_submitted: boolean;
+  requires_transcript_confirmation: boolean;
+  can_auto_submit: boolean;
+  error_code: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VoiceUploadResponse = {
+  request_id: string;
+  voice_message: VoiceMessageOut;
+  provider: VoiceProviderOut;
+};
+
+export type VoiceStatusResponse = {
+  request_id: string;
+  voice_message: VoiceMessageOut;
+  provider: VoiceProviderOut;
+};
+
+export type VoiceSubmitResponse = VoiceStatusResponse & {
+  conversation_id: string;
+  user_message: MessageOut | null;
+  assistant_message: MessageOut | null;
+  provider: ProviderMetadata;
+  workflow: WorkflowOut | null;
+};
+
+export type SpeechSynthesisOut = {
+  id: string;
+  message_id: string;
+  user_id: string;
+  language: string;
+  provider: string;
+  voice_name: string | null;
+  audio_format: string;
+  duration_ms: number | null;
+  size_bytes: number | null;
+  content_hash: string | null;
+  status: string;
+  download_url: string | null;
+  expires_at: string | null;
+  is_mock: boolean;
+  disclaimer: string;
+  created_at: string;
+};
+
+function voiceHeaders(demoKey: string): Record<string, string> {
+  return { "X-Demo-User-Key": demoKey };
+}
+
+export async function uploadAudio(input: {
+  demoKey: string;
+  file: Blob;
+  filename?: string;
+  conversationId?: string | null;
+  requestedLanguage?: string | null;
+}): Promise<VoiceUploadResponse> {
+  const form = new FormData();
+  form.append("file", input.file, input.filename ?? "recording.wav");
+  if (input.conversationId) {
+    form.append("conversation_id", input.conversationId);
+  }
+  if (input.requestedLanguage) {
+    form.append("requested_language", input.requestedLanguage);
+  }
+  const res = await fetch(`${API_URL}/api/v1/voice/upload`, {
+    method: "POST",
+    headers: voiceHeaders(input.demoKey),
+    body: form,
+  });
+  return parseJson<VoiceUploadResponse>(res);
+}
+
+export async function transcribe(input: {
+  demoKey: string;
+  voiceMessageId: string;
+  autoSubmit?: boolean;
+  fixtureKey?: string | null;
+}): Promise<VoiceStatusResponse | VoiceSubmitResponse> {
+  const params = new URLSearchParams();
+  if (input.autoSubmit !== undefined) {
+    params.set("auto_submit", String(input.autoSubmit));
+  }
+  if (input.fixtureKey) {
+    params.set("fixture_key", input.fixtureKey);
+  }
+  const qs = params.toString();
+  const res = await fetch(
+    `${API_URL}/api/v1/voice/messages/${input.voiceMessageId}/transcribe${qs ? `?${qs}` : ""}`,
+    {
+      method: "POST",
+      headers: voiceHeaders(input.demoKey),
+    },
+  );
+  return parseJson(res);
+}
+
+export async function confirmTranscript(input: {
+  demoKey: string;
+  voiceMessageId: string;
+  transcriptHash: string;
+}): Promise<VoiceStatusResponse> {
+  const res = await fetch(
+    `${API_URL}/api/v1/voice/messages/${input.voiceMessageId}/confirm`,
+    {
+      method: "POST",
+      headers: {
+        ...voiceHeaders(input.demoKey),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ transcript_hash: input.transcriptHash }),
+    },
+  );
+  return parseJson<VoiceStatusResponse>(res);
+}
+
+export async function editTranscript(input: {
+  demoKey: string;
+  voiceMessageId: string;
+  transcript: string;
+}): Promise<VoiceStatusResponse> {
+  const res = await fetch(`${API_URL}/api/v1/voice/messages/${input.voiceMessageId}/edit`, {
+    method: "POST",
+    headers: {
+      ...voiceHeaders(input.demoKey),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ transcript: input.transcript }),
+  });
+  return parseJson<VoiceStatusResponse>(res);
+}
+
+export async function submitTranscript(input: {
+  demoKey: string;
+  voiceMessageId: string;
+  transcriptHash?: string | null;
+  idempotencyKey?: string | null;
+}): Promise<VoiceSubmitResponse> {
+  const params = new URLSearchParams();
+  if (input.transcriptHash) {
+    params.set("transcript_hash", input.transcriptHash);
+  }
+  const qs = params.toString();
+  const headers: Record<string, string> = voiceHeaders(input.demoKey);
+  if (input.idempotencyKey) {
+    headers["Idempotency-Key"] = input.idempotencyKey;
+  }
+  const res = await fetch(
+    `${API_URL}/api/v1/voice/messages/${input.voiceMessageId}/submit${qs ? `?${qs}` : ""}`,
+    {
+      method: "POST",
+      headers,
+    },
+  );
+  return parseJson<VoiceSubmitResponse>(res);
+}
+
+export async function requestTts(input: {
+  demoKey: string;
+  messageId: string;
+  language?: string | null;
+  voiceName?: string | null;
+}): Promise<SpeechSynthesisOut> {
+  const res = await fetch(`${API_URL}/api/v1/voice/tts`, {
+    method: "POST",
+    headers: {
+      ...voiceHeaders(input.demoKey),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      message_id: input.messageId,
+      language: input.language ?? null,
+      voice_name: input.voiceName ?? null,
+    }),
+  });
+  return parseJson<SpeechSynthesisOut>(res);
+}
+
+export function getAudioDownloadUrl(
+  kind: "recording" | "synthesis",
+  id: string,
+): string {
+  const base = `${API_URL}/api/v1/voice`;
+  if (kind === "recording") {
+    return `${base}/messages/${id}/download`;
+  }
+  return `${base}/synthesis/${id}/download`;
+}

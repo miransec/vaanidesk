@@ -1,4 +1,4 @@
-"""SQLAlchemy models — Phase 1 + Phase 2 + Phase 3 knowledge."""
+"""SQLAlchemy models — Phase 1 + Phase 2 + Phase 3 knowledge + Phase 4 voice."""
 
 from app.models.entities import (
     AgentTrace,
@@ -34,6 +34,15 @@ from app.models.knowledge import (
     RetrievalStrategy,
     RetrievalTrace,
 )
+from app.models.voice import (
+    SpeechSynthesis,
+    SpeechSynthesisStatus,
+    VoiceMessage,
+    VoiceTrace,
+    VoiceTraceOperation,
+    VoiceTraceResultStatus,
+    VoiceTranscriptionStatus,
+)
 
 __all__ = [
     "EMBEDDING_DIM",
@@ -57,6 +66,8 @@ __all__ = [
     "Product",
     "RetrievalStrategy",
     "RetrievalTrace",
+    "SpeechSynthesis",
+    "SpeechSynthesisStatus",
     "SupportTicket",
     "TicketCategory",
     "TicketPriority",
@@ -65,5 +76,10 @@ __all__ = [
     "ToolExecutionStatus",
     "ToolRiskLevel",
     "User",
+    "VoiceMessage",
+    "VoiceTrace",
+    "VoiceTraceOperation",
+    "VoiceTraceResultStatus",
+    "VoiceTranscriptionStatus",
     "WorkflowStatus",
 ]

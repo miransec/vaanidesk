@@ -4,5 +4,3 @@ __pycache__
 .ruff_cache
 .mypy_cache
 *.pyc
-.pytest_cache
-tests

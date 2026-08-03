@@ -1,4 +1,5 @@
-FROM python:3.12-slim
+# Multi-stage: production runtime (default last stage) + test target with dev extras.
+FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -19,9 +20,17 @@ COPY alembic.ini ./
 COPY scripts ./scripts
 COPY uv.lock ./
 
+FROM base AS test
+COPY tests ./tests
+RUN uv sync --frozen --extra dev \
+    && chown -R appuser:appuser /app
+USER appuser
+WORKDIR /app
+CMD ["uv", "run", "pytest", "-rs"]
+
+FROM base AS runtime
 RUN uv sync --frozen --no-dev \
     && chown -R appuser:appuser /app
-
 USER appuser
 EXPOSE 8000
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

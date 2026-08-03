@@ -30,6 +30,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: runtime
     environment:
       APP_ENV: development
       DEBUG: "true"
@@ -37,13 +38,18 @@ services:
       DATABASE_URL: postgresql+asyncpg://vaanidesk:vaanidesk_dev_password@postgres:5432/vaanidesk
       REDIS_URL: redis://redis:6379/0
       LLM_PROVIDER: mock
+      STT_PROVIDER: mock
+      TTS_PROVIDER: mock
       CORS_ORIGINS: http://localhost:3000
       DEMO_MODE: "true"
+      VOICE_ENABLED: "true"
+      AUDIO_STORAGE_DIR: /data/audio
       KNOWLEDGE_SEED_DIR: /sample_data/policies
     ports:
       - "8000:8000"
     volumes:
       - ./sample_data:/sample_data:ro
+      - vaanidesk_audio:/data/audio
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,3 +77,4 @@ services:
 
 volumes:
   vaanidesk_pgdata:
+  vaanidesk_audio:

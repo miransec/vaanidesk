@@ -68,11 +68,30 @@ class Settings(BaseSettings):
     rag_min_retrieval_confidence: float = 0.30
     max_knowledge_upload_bytes: int = 512000
 
+    # Phase 4 — voice / audio
+    voice_enabled: bool = True
+    voice_auto_submit_enabled: bool = True
+    audio_storage_dir: str = "./uploads/audio"
+    audio_retention_hours: int = 72
+    audio_max_size_bytes: int = 10_485_760
+    audio_max_duration_seconds: int = 120
+    audio_allowed_formats: str = "wav,mp3,webm,m4a"
+    audio_processing_timeout_seconds: int = 30
+    stt_min_auto_submit_confidence: float = 0.85
+    voice_uploads_per_minute: int = 20
+    voice_bytes_per_hour: int = 52_428_800
+    stt_requests_per_minute: int = 30
+    tts_requests_per_minute: int = 30
+    voice_max_concurrent_jobs: int = 4
+
     def cors_origin_list(self) -> list[str]:
         return _split_csv(self.cors_origins)
 
     def trusted_host_list(self) -> list[str]:
         return _split_csv(self.trusted_hosts)
+
+    def audio_allowed_formats_list(self) -> list[str]:
+        return _split_csv(self.audio_allowed_formats)
 
 
 @lru_cache

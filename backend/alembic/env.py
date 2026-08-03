@@ -19,9 +19,12 @@ from app.models import (  # noqa: F401 — register metadata
     OrderItem,
     Product,
     RetrievalTrace,
+    SpeechSynthesis,
     SupportTicket,
     ToolExecution,
     User,
+    VoiceMessage,
+    VoiceTrace,
 )
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection

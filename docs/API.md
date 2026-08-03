@@ -1,4 +1,4 @@
-# API Documentation — Phase 3
+# API Documentation — Phase 4
 
 OpenAPI from FastAPI is available at `/docs` when the backend is running.
 
@@ -12,105 +12,33 @@ OpenAPI from FastAPI is available at `/docs` when the backend is running.
 
 ## Demo authentication (not production)
 
-Identify the demo user with one of:
-
 - Header `X-Demo-User-Key: demo-anya` (or `demo-rahul`, `demo-priya`, `demo-arjun`)
-- Header `X-Demo-User-Id: <uuid>`
-
-Optional: `Idempotency-Key` for state-changing tool paths.
+- Optional: `Idempotency-Key` for state-changing tool paths.
 
 ## Chat
 
-### `POST /api/v1/chat/messages`
-
-Runs the controlled workflow. Policy questions use **hybrid retrieval** (not tools). Order-status questions still use structured tools.
-
-Workflow extras for RAG:
-
-```json
-{
-  "workflow": {
-    "intent": "policy_question",
-    "retrieval_strategy": "hybrid",
-    "retrieval_confidence": 0.82,
-    "no_answer": false,
-    "citations": [
-      {
-        "document_title": "VaaniDesk Return Procedure",
-        "document_version": 2,
-        "section_label": "Window",
-        "chunk_id": "...",
-        "source_type": "markdown",
-        "score": 0.031
-      }
-    ],
-    "retrieval_trace_id": "...",
-    "suspicious_evidence": false
-  }
-}
-```
-
-### `POST /api/v1/actions/confirm`
-
-Unchanged from Phase 2 (Redis fail-closed confirmation).
+`POST /api/v1/chat/messages` — controlled workflow (tools + hybrid RAG). Unchanged from Phase 3 for text.
 
 ## Knowledge
 
-### `POST /api/v1/knowledge/documents`
+See Phase 3 routes under `/api/v1/knowledge/...`.
 
-```json
-{
-  "title": "Shipping SLA",
-  "content": "# Shipping\n\nStandard delivery is 3–5 business days.",
-  "mime_type": "text/markdown",
-  "language": "en",
-  "access_level": "authenticated",
-  "activate": true
-}
-```
+## Voice (`/api/v1/voice`)
 
-Supported MIME: `text/markdown`, `text/plain`, `application/json` (approved text fields only).
+Voice is a transport into the existing orchestrator. Default STT/TTS are **deterministic mocks**.
 
-### `GET /api/v1/knowledge/documents`
+| Method | Path | Notes |
+|--------|------|-------|
+| POST | `/voice/upload` | multipart audio; validates type/size/duration |
+| POST | `/voice/messages/{id}/transcribe` | mock STT; optional auto-submit when confidence high and not sensitive |
+| GET | `/voice/messages/{id}` | status + transcript metadata |
+| POST | `/voice/messages/{id}/confirm` | bind transcript hash |
+| POST | `/voice/messages/{id}/edit` | edit transcript; invalidates confirmation |
+| POST | `/voice/messages/{id}/submit` | submit confirmed text to orchestrator |
+| POST | `/voice/tts` | mock TTS for assistant message |
+| GET | `/voice/messages/{id}/download` | authorized recording playback |
+| GET | `/voice/synthesis/{id}/download` | authorized TTS playback |
+| DELETE | `/voice/messages/{id}` | delete recording |
+| POST | `/voice/cleanup` | expired audio cleanup |
 
-### `GET /api/v1/knowledge/documents/{id}`
-
-Includes versions + chunk counts.
-
-### `GET /api/v1/knowledge/documents/{id}/versions`
-
-### `POST /api/v1/knowledge/documents/{id}/activate`
-
-```json
-{ "version_id": "..." }
-```
-
-### `POST /api/v1/knowledge/documents/{id}/deactivate`
-
-### `POST /api/v1/knowledge/documents/{id}/versions/{version_id}/reindex`
-
-### `POST /api/v1/knowledge/retrieval/test`
-
-```json
-{
-  "query": "What is the return procedure?",
-  "strategy": "hybrid",
-  "top_k": 5,
-  "persist_trace": true
-}
-```
-
-Strategies: `keyword` | `vector` | `hybrid` | `hybrid_rerank`
-
-### `GET /api/v1/knowledge/retrieval/traces/{trace_id}`
-
-Own traces only. Stores IDs/scores/titles — not unauthorized chunk bodies.
-
-## Public identifiers
-
-| Kind | Format | Example |
-|------|--------|---------|
-| Order | `VD-xxxxx` | `VD-10001` |
-| Ticket | `TKT-xxxxx` | `TKT-10001` |
-
-Order lookups always require **authenticated user + public ref**.
+Sensitive intents always require transcript confirmation before submit. Editing invalidates prior confirmation.

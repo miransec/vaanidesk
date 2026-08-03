@@ -4,23 +4,26 @@
 
 VaaniDesk is a production-shaped AI customer-support platform for a fictional e-commerce company (portfolio project for **Puch AI**).
 
-> **Status:** Phase 3 final closeout verified (64 pytest passed, 0 skipped; Docker seed idempotent). Tagged baselines: `phase-1-complete`, `phase-2-complete`. Phase 4+ not started.
+> **Status:** Phase 4 complete (86 pytest passed, 0 skipped). Tagged baselines: `phase-1-complete`, `phase-2-complete`. Phase 5 (MCP) not started.
 
 **Default Git branch:** `main`
 
 ---
 
-## What works now (Phases 1–3)
+## What works now (Phases 1–4)
 
-- FastAPI `/health`, `/ready`, `/api/v1` chat + confirm + **knowledge** APIs
+- FastAPI `/health`, `/ready`, `/api/v1` chat + confirm + **knowledge** + **voice** APIs
 - Explicit workflow: language → intent → **tools or RAG** → AuthZ → confirmation → traces
 - Tools: order status/details, address update, cancel eligibility/cancel, tickets, human queue
 - Knowledge: Markdown/text/JSON ingest, versions, deterministic mock embeddings, FTS + pgvector, hybrid RRF, optional mock rerank
 - Citations, configurable no-answer threshold, advisory injection scanning
 - In-SQL document access control (public / authenticated / restricted allowlist)
 - Knowledge seed path via `KNOWLEDGE_SEED_DIR` (Compose: `/sample_data/policies`; host fallback to repo `sample_data/policies`)
-- Next.js `/chat` (citations + retrieval metadata) and `/knowledge` (ingest + retrieval test)
+- **Voice** (Phase 4): upload → mock STT → transcript confirm → submit to orchestrator; mock TTS for responses
+- Voice features: `VOICE_ENABLED` toggle, local `AudioStorage`, per-user rate limiting, transcript confirmation for sensitive intents
+- Next.js `/chat` (citations + retrieval metadata + voice recording UI) and `/knowledge` (ingest + retrieval test)
 - Compose: postgres (pgvector), redis, backend, frontend
+- `docker-compose.test.yml` for isolated test runs
 
 ---
 
@@ -62,6 +65,12 @@ docker compose exec backend uv run python -m scripts.seed
 docker compose exec backend uv run python -m scripts.seed_knowledge
 ```
 
+### Test Compose
+
+```powershell
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+```
+
 `KNOWLEDGE_SEED_DIR` defaults to `/sample_data/policies` in Compose (`./sample_data` → `/sample_data:ro`). On the host, leave it unset to use `<repository-root>/sample_data/policies`. The seed script fails clearly if `manifest.json` is missing.
 
 Demo auth header: `X-Demo-User-Key: demo-anya` (not production).
@@ -72,6 +81,17 @@ Try:
 - `what is your return policy`
 - `वापसी नीति क्या है?`
 - `please cancel my order VD-10001`
+
+---
+
+## Phase 4 voice notes
+
+- Voice is a **transport** into the existing controlled orchestrator — not a separate agent
+- STT/TTS providers: `DeterministicMockSTT` / `DeterministicMockTTS` (no real speech quality claims)
+- Audio storage: local filesystem (`AUDIO_STORAGE_DIR`); no S3 required for demo
+- Toggle: `VOICE_ENABLED=true` in `.env`
+- Transcript confirmation required before submitting sensitive intents
+- Rate limits: uploads/min, bytes/hour, STT/TTS requests/min, max concurrent jobs (all configurable)
 
 ---
 
