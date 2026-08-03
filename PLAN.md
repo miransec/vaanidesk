@@ -2,7 +2,7 @@
 
 **Tagline:** Multilingual AI support across chat, voice and images
 **Portfolio target:** Puch AI engineering application
-**Phase status:** Phase 1 foundation implemented — Compose/Postgres verification may remain blocked until Docker Desktop admin install succeeds. Do not start Phase 2 until Phase 1 review.
+**Phase status:** Phase 2 agent/tools implemented — awaiting review before Phase 3 (RAG).
 
 **Default Git branch:** `main` (rename from empty-repo `master` before first commit)
 

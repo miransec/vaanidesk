@@ -1,4 +1,4 @@
-# API Documentation — Phase 1
+# API Documentation — Phase 2
 
 OpenAPI from FastAPI is available at `/docs` when the backend is running.
 
@@ -10,49 +10,113 @@ OpenAPI from FastAPI is available at `/docs` when the backend is running.
 | Liveness | `/health` | No |
 | Readiness | `/ready` | No |
 
-## Demo authentication (Phase 1 only)
+## Demo authentication (not production)
 
-Not production-ready. Identify the demo user with one of:
+Identify the demo user with one of:
 
 - Header `X-Demo-User-Key: demo-anya` (or `demo-rahul`, `demo-priya`, `demo-arjun`)
 - Header `X-Demo-User-Id: <uuid>`
 
-Missing/invalid identity → `401` with `error.code` `demo_auth_required` or `demo_user_not_found`.
+Optional: `Idempotency-Key` for state-changing tool paths.
 
 ## Endpoints
 
-### `GET /health`
+### `GET /health` / `GET /ready`
 
-Returns `{ "status": "ok", "service": "vaanidesk-backend" }`.
-
-### `GET /ready`
-
-Checks PostgreSQL (required) and Redis (reported). Returns `503` if PostgreSQL is unavailable. Details include exception **type names only** (no connection strings/secrets).
+Unchanged from Phase 1. Postgres required for ready; Redis reported.
 
 ### `GET /api/v1/demo-users`
 
-Lists seeded demo users for the UI.
+Lists seeded demo users.
 
 ### `POST /api/v1/chat/messages`
+
+Runs the **controlled Phase 2 workflow** (language → intent → tools → confirm/escalate).
 
 Request:
 
 ```json
 {
-  "content": "mera order kahan hai",
+  "content": "where is my order VD-10001",
   "conversation_id": null
 }
 ```
 
-Response includes `request_id`, `conversation_id`, `user_message`, `assistant_message`, and `provider` metadata (`is_mock`, model name, language hint).
+Response (abbreviated):
 
-### `GET /api/v1/conversations`
+```json
+{
+  "request_id": "...",
+  "conversation_id": "...",
+  "user_message": { "...": "..." },
+  "assistant_message": { "...": "..." },
+  "provider": {
+    "provider": "workflow-heuristic",
+    "model": "vaanidesk-phase2-workflow",
+    "is_mock": true,
+    "language_hint": "en"
+  },
+  "workflow": {
+    "status": "completed",
+    "detected_language": "en",
+    "script": "latin",
+    "intent": "order_status",
+    "intent_confidence": 0.9,
+    "selected_tool": "get_order_status",
+    "tool_execution_status": "success",
+    "clarification_required": false,
+    "confirmation_required": false,
+    "escalation_required": false,
+    "trace_id": "..."
+  }
+}
+```
 
-Lists conversations for the authenticated demo user only.
+When confirmation is required:
 
-### `GET /api/v1/conversations/{conversation_id}`
+```json
+{
+  "workflow": {
+    "status": "confirmation_required",
+    "confirmation_required": true,
+    "selected_tool": "cancel_order",
+    "confirmation": {
+      "token": "<opaque>",
+      "action": "cancel_order",
+      "summary": "Cancel order VD-10001",
+      "expires_at": "..."
+    }
+  }
+}
+```
 
-Returns messages. Another user's conversation → `403` `conversation_forbidden`.
+Do not put confirmation tokens in URLs. Tokens are never logged.
+
+### `POST /api/v1/actions/confirm`
+
+```json
+{
+  "confirmation_token": "<opaque>",
+  "approved": true
+}
+```
+
+- Wrong user → `403 confirmation_forbidden` (token not consumed)
+- Invalid/expired/reused → `400`
+- Redis down → `503 confirmation_unavailable` (fail closed)
+
+### Conversations
+
+`GET /api/v1/conversations` and `GET /api/v1/conversations/{id}` unchanged; ownership enforced.
+
+## Public identifiers
+
+| Kind | Format | Example |
+|------|--------|---------|
+| Order | `VD-xxxxx` | `VD-10001` |
+| Ticket | `TKT-xxxxx` | `TKT-10001` |
+
+Order lookups always require **authenticated user + public ref**. Lookup by ref alone is forbidden.
 
 ## Error envelope
 

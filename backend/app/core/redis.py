@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from typing import Protocol
 
 from redis.asyncio import Redis
@@ -23,8 +24,14 @@ async def get_redis() -> Redis[str]:
 async def close_redis() -> None:
     global _redis
     if _redis is not None:
-        await _redis.close()
+        with suppress(Exception):
+            await _redis.close()
         _redis = None
+
+
+async def reset_redis() -> None:
+    """Drop cached client (tests / event-loop reuse)."""
+    await close_redis()
 
 
 async def check_redis() -> tuple[bool, str | None]:
@@ -36,6 +43,7 @@ async def check_redis() -> tuple[bool, str | None]:
         return False, "ping_failed"
     except Exception as exc:  # noqa: BLE001
         logger.warning("redis_check_failed error_type=%s", type(exc).__name__)
+        await reset_redis()
         return False, type(exc).__name__
 
 

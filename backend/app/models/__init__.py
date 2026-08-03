@@ -1,23 +1,45 @@
-"""SQLAlchemy models — Phase 1 subset only."""
+"""SQLAlchemy models — Phase 1 + Phase 2 agent/tools."""
 
 from app.models.entities import (
+    AgentTrace,
     Conversation,
+    IdempotencyRecord,
+    IdempotencyState,
     Message,
     MessageRole,
     Order,
     OrderItem,
     OrderStatus,
     Product,
+    SupportTicket,
+    TicketCategory,
+    TicketPriority,
+    TicketStatus,
+    ToolExecution,
+    ToolExecutionStatus,
+    ToolRiskLevel,
     User,
+    WorkflowStatus,
 )
 
 __all__ = [
+    "AgentTrace",
     "Conversation",
+    "IdempotencyRecord",
+    "IdempotencyState",
     "Message",
     "MessageRole",
     "Order",
     "OrderItem",
     "OrderStatus",
     "Product",
+    "SupportTicket",
+    "TicketCategory",
+    "TicketPriority",
+    "TicketStatus",
+    "ToolExecution",
+    "ToolExecutionStatus",
+    "ToolRiskLevel",
     "User",
+    "WorkflowStatus",
 ]

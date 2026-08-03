@@ -74,7 +74,6 @@ async def seed(*, force: bool = False) -> dict[str, int]:
     async with SessionLocal() as db:
         existing_users = (await db.execute(select(func.count()).select_from(User))).scalar_one()
         if existing_users and not force:
-            # Idempotent path: ensure counts, skip recreating everything.
             counts = await _counts(db)
             if counts["users"] >= 4 and counts["products"] >= 25 and counts["orders"] >= 50:
                 return {**counts, "seeded": 0, "mode": "already_present"}
@@ -82,12 +81,13 @@ async def seed(*, force: bool = False) -> dict[str, int]:
         if force:
             await db.execute(
                 text(
-                    "TRUNCATE order_items, orders, messages, conversations, products, users CASCADE"
+                    "TRUNCATE idempotency_records, tool_executions, agent_traces, "
+                    "support_tickets, order_items, orders, messages, conversations, "
+                    "products, users CASCADE"
                 )
             )
             await db.commit()
 
-        # Users (upsert by demo_key)
         users: list[User] = []
         for row in DEMO_USERS:
             existing = (
@@ -101,7 +101,6 @@ async def seed(*, force: bool = False) -> dict[str, int]:
             users.append(user)
         await db.flush()
 
-        # Products (upsert by sku)
         products: list[Product] = []
         for row in product_rows:
             existing = (
@@ -122,15 +121,14 @@ async def seed(*, force: bool = False) -> dict[str, int]:
             products.append(product)
         await db.flush()
 
-        # Orders — create until 50 unique order_numbers exist
         existing_order_count = (
             await db.execute(select(func.count()).select_from(Order))
         ).scalar_one()
         created_orders = 0
-        order_number = 8300
+        next_ref = 10001
         while existing_order_count + created_orders < 50:
-            number = str(order_number)
-            order_number += 1
+            number = f"VD-{next_ref}"
+            next_ref += 1
             exists = (
                 await db.execute(select(Order).where(Order.order_number == number))
             ).scalar_one_or_none()
@@ -141,6 +139,7 @@ async def seed(*, force: bool = False) -> dict[str, int]:
             qty = (created_orders % 3) + 1
             status = STATUSES[created_orders % len(STATUSES)]
             total = (product.price * qty).quantize(Decimal("0.01"))
+            address = f"{user.display_name}, Demo Address {next_ref - 1}, Mumbai, MH 400001"
             order = Order(
                 id=uuid5(NAMESPACE_URL, f"vaanidesk:order:{number}"),
                 user_id=user.id,
@@ -148,6 +147,7 @@ async def seed(*, force: bool = False) -> dict[str, int]:
                 status=status,
                 total_amount=total,
                 currency="INR",
+                delivery_address=address,
             )
             db.add(order)
             await db.flush()
@@ -162,7 +162,6 @@ async def seed(*, force: bool = False) -> dict[str, int]:
             )
             created_orders += 1
 
-        # Sample conversations/messages if missing
         for idx, user in enumerate(users):
             title = f"Welcome chat — {user.display_name}"
             existing_conv = (
@@ -188,8 +187,8 @@ async def seed(*, force: bool = False) -> dict[str, int]:
                 ),
                 (
                     MessageRole.ASSISTANT,
-                    "Welcome to VaaniDesk Phase 1 mock chat. "
-                    "(Mock provider — not a production model.)",
+                    "Welcome to VaaniDesk Phase 2 controlled workflow. "
+                    "(Mock heuristic workflow — not a production model.)",
                 ),
             ]
             for role, content in samples:
@@ -199,7 +198,7 @@ async def seed(*, force: bool = False) -> dict[str, int]:
                         role=role,
                         content=content,
                         request_id="seed",
-                        provider_metadata={"is_mock": True, "provider": "mock"}
+                        provider_metadata={"is_mock": True, "provider": "workflow-heuristic"}
                         if role == MessageRole.ASSISTANT
                         else None,
                     )

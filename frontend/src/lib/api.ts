@@ -25,12 +25,44 @@ export type MessageOut = {
   created_at: string;
 };
 
+export type ConfirmationOut = {
+  token: string;
+  action: string;
+  summary: string;
+  expires_at: string;
+};
+
+export type WorkflowOut = {
+  status: string;
+  detected_language?: string | null;
+  script?: string | null;
+  intent?: string | null;
+  intent_confidence?: number | null;
+  selected_tool?: string | null;
+  tool_execution_status?: string | null;
+  clarification_required?: boolean;
+  confirmation_required?: boolean;
+  escalation_required?: boolean;
+  escalation_reason?: string | null;
+  trace_id?: string | null;
+  confirmation?: ConfirmationOut | null;
+};
+
 export type ChatMessageResponse = {
   request_id: string;
   conversation_id: string;
   user_message: MessageOut;
   assistant_message: MessageOut;
   provider: ProviderMetadata;
+  workflow?: WorkflowOut | null;
+};
+
+export type ConfirmActionResponse = {
+  request_id: string;
+  conversation_id: string;
+  assistant_message: MessageOut;
+  provider: ProviderMetadata;
+  workflow: WorkflowOut;
 };
 
 export type ConversationSummary = {
@@ -96,19 +128,48 @@ export async function sendMessage(input: {
   demoKey: string;
   content: string;
   conversationId?: string | null;
+  idempotencyKey?: string | null;
 }): Promise<ChatMessageResponse> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Demo-User-Key": input.demoKey,
+  };
+  if (input.idempotencyKey) {
+    headers["Idempotency-Key"] = input.idempotencyKey;
+  }
   const res = await fetch(`${API_URL}/api/v1/chat/messages`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Demo-User-Key": input.demoKey,
-    },
+    headers,
     body: JSON.stringify({
       content: input.content,
       conversation_id: input.conversationId ?? null,
     }),
   });
   return parseJson<ChatMessageResponse>(res);
+}
+
+export async function confirmAction(input: {
+  demoKey: string;
+  confirmationToken: string;
+  approved: boolean;
+  idempotencyKey?: string | null;
+}): Promise<ConfirmActionResponse> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Demo-User-Key": input.demoKey,
+  };
+  if (input.idempotencyKey) {
+    headers["Idempotency-Key"] = input.idempotencyKey;
+  }
+  const res = await fetch(`${API_URL}/api/v1/actions/confirm`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      confirmation_token: input.confirmationToken,
+      approved: input.approved,
+    }),
+  });
+  return parseJson<ConfirmActionResponse>(res);
 }
 
 export function getApiBaseUrl(): string {

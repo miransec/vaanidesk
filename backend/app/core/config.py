@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     demo_mode: bool = True
     seed_on_startup: bool = False
 
+    confirmation_token_ttl_seconds: int = 600
+    idempotency_record_ttl_days: int = 30
+    agent_confidence_escalate_threshold: float = 0.45
+
     def cors_origin_list(self) -> list[str]:
         return _split_csv(self.cors_origins)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +12,8 @@ from app.models import User
 from app.schemas.chat import (
     ChatMessageCreate,
     ChatMessageResponse,
+    ConfirmActionRequest,
+    ConfirmActionResponse,
     ConversationDetail,
     ConversationSummary,
     DemoUserOut,
@@ -34,9 +36,31 @@ async def post_chat_message(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_demo_user),
     request_id: str = Depends(get_request_id),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> ChatMessageResponse:
     return await chat_service.create_chat_message(
-        db=db, user=user, payload=payload, request_id=request_id
+        db=db,
+        user=user,
+        payload=payload,
+        request_id=request_id,
+        idempotency_key=idempotency_key,
+    )
+
+
+@router.post("/actions/confirm", response_model=ConfirmActionResponse)
+async def post_confirm_action(
+    payload: ConfirmActionRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_demo_user),
+    request_id: str = Depends(get_request_id),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+) -> ConfirmActionResponse:
+    return await chat_service.confirm_or_deny_action(
+        db=db,
+        user=user,
+        payload=payload,
+        request_id=request_id,
+        idempotency_key=idempotency_key,
     )
 
 

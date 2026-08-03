@@ -3,8 +3,11 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  ConfirmationOut,
   DemoUser,
   MessageOut,
+  WorkflowOut,
+  confirmAction,
   getApiBaseUrl,
   getConversation,
   listConversations,
@@ -23,7 +26,12 @@ export function ChatPanel() {
   const [loading, setLoading] = useState(false);
   const [bootError, setBootError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [providerNote, setProviderNote] = useState("Mock provider active (LLM_PROVIDER=mock)");
+  const [providerNote, setProviderNote] = useState(
+    "Phase 2 controlled workflow (heuristic — not a production model)",
+  );
+  const [workflow, setWorkflow] = useState<WorkflowOut | null>(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<ConfirmationOut | null>(null);
+  const [showDevDetails, setShowDevDetails] = useState(false);
 
   const selectedUser = useMemo(
     () => users.find((u) => u.demo_key === demoKey) ?? null,
@@ -83,6 +91,16 @@ export function ChatPanel() {
     };
   }, [demoKey, bootError]);
 
+  function applyWorkflow(next: WorkflowOut | null | undefined) {
+    if (!next) {
+      setWorkflow(null);
+      setPendingConfirmation(null);
+      return;
+    }
+    setWorkflow(next);
+    setPendingConfirmation(next.confirmation ?? null);
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!input.trim() || loading) return;
@@ -103,9 +121,10 @@ export function ChatPanel() {
           providerLabel: `${result.provider.provider}/${result.provider.model}`,
         },
       ]);
+      applyWorkflow(result.workflow);
       setProviderNote(
         result.provider.is_mock
-          ? `Mock provider active — ${result.provider.model}${
+          ? `Workflow active — ${result.provider.model}${
               result.provider.language_hint ? ` · lang: ${result.provider.language_hint}` : ""
             }`
           : `${result.provider.provider}/${result.provider.model}`,
@@ -118,13 +137,40 @@ export function ChatPanel() {
     }
   }
 
+  async function onConfirm(approved: boolean) {
+    if (!pendingConfirmation || loading) return;
+    setLoading(true);
+    setSendError(null);
+    try {
+      const result = await confirmAction({
+        demoKey,
+        confirmationToken: pendingConfirmation.token,
+        approved,
+      });
+      setConversationId(result.conversation_id);
+      setMessages((prev) => [
+        ...prev,
+        {
+          ...result.assistant_message,
+          providerLabel: `${result.provider.provider}/${result.provider.model}`,
+        },
+      ]);
+      applyWorkflow(result.workflow);
+      setPendingConfirmation(null);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Confirmation failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6 md:py-10">
       <header className="space-y-2 border-b border-teal-900/10 pb-4">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-800">VaaniDesk</p>
         <h1 className="font-display text-3xl text-slate-900 md:text-4xl">Support chat</h1>
         <p className="text-sm text-slate-600">
-          Phase 1 demo auth via <code className="rounded bg-slate-100 px-1">X-Demo-User-Key</code>.
+          Phase 2 demo auth via <code className="rounded bg-slate-100 px-1">X-Demo-User-Key</code>.
           Not production authentication. API: {getApiBaseUrl()}
         </p>
         <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-950">{providerNote}</p>
@@ -139,6 +185,8 @@ export function ChatPanel() {
             onChange={(e) => {
               setConversationId(null);
               setMessages([]);
+              setWorkflow(null);
+              setPendingConfirmation(null);
               setDemoKey(e.target.value);
             }}
           >
@@ -158,6 +206,72 @@ export function ChatPanel() {
         ) : null}
       </div>
 
+      {workflow ? (
+        <div className="grid gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-700 sm:grid-cols-2">
+          <p>
+            Language: <strong>{workflow.detected_language ?? "—"}</strong> ({workflow.script ?? "—"})
+          </p>
+          <p>
+            Intent: <strong>{workflow.intent ?? "—"}</strong>
+            {workflow.intent_confidence != null
+              ? ` (${workflow.intent_confidence.toFixed(2)})`
+              : ""}
+          </p>
+          <p>
+            Tool: <strong>{workflow.selected_tool ?? "—"}</strong>
+          </p>
+          <p>
+            Tool status: <strong>{workflow.tool_execution_status ?? "—"}</strong>
+          </p>
+          {workflow.clarification_required ? (
+            <p className="sm:col-span-2 text-amber-900">Clarification required</p>
+          ) : null}
+          {workflow.escalation_required ? (
+            <p className="sm:col-span-2 text-rose-900">
+              Escalation queued
+              {workflow.escalation_reason ? ` — ${workflow.escalation_reason}` : ""}
+            </p>
+          ) : null}
+          <label className="sm:col-span-2 flex items-center gap-2 text-xs text-slate-500">
+            <input
+              type="checkbox"
+              checked={showDevDetails}
+              onChange={(e) => setShowDevDetails(e.target.checked)}
+            />
+            Developer details
+          </label>
+          {showDevDetails && workflow.trace_id ? (
+            <p className="sm:col-span-2 font-mono text-xs">trace_id: {workflow.trace_id}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {pendingConfirmation ? (
+        <div className="space-y-3 rounded-md border border-teal-800/30 bg-teal-50 px-4 py-3 text-sm text-teal-950">
+          <p className="font-medium">Confirmation required</p>
+          <p>{pendingConfirmation.summary}</p>
+          <p className="text-xs opacity-70">Expires: {pendingConfirmation.expires_at}</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => onConfirm(true)}
+              className="rounded-md bg-teal-800 px-3 py-2 text-white disabled:opacity-50"
+            >
+              Approve
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => onConfirm(false)}
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-800 disabled:opacity-50"
+            >
+              Deny
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {bootError ? (
         <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-900">
           {bootError}
@@ -172,7 +286,7 @@ export function ChatPanel() {
       <div className="min-h-[320px] flex-1 space-y-3 rounded-lg border border-slate-200 bg-white/80 p-4">
         {messages.length === 0 ? (
           <p className="text-sm text-slate-500">
-            Try: hello · namaste · mera order kahan hai · मेरा ऑर्डर कहाँ है · माझी ऑर्डर कुठे आहे
+            Try: where is my order VD-10001 · mera order VD-10001 kidhar hai · cancel order VD-10001
           </p>
         ) : (
           messages.map((message) => (

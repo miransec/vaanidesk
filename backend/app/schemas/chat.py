@@ -41,12 +41,49 @@ class MessageOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ConfirmationOut(BaseModel):
+    token: str
+    action: str
+    summary: str
+    expires_at: datetime | str
+
+
+class WorkflowOut(BaseModel):
+    status: str
+    detected_language: str | None = None
+    script: str | None = None
+    intent: str | None = None
+    intent_confidence: float | None = None
+    selected_tool: str | None = None
+    tool_execution_status: str | None = None
+    clarification_required: bool = False
+    confirmation_required: bool = False
+    escalation_required: bool = False
+    escalation_reason: str | None = None
+    trace_id: UUID | None = None
+    confirmation: ConfirmationOut | None = None
+
+
 class ChatMessageResponse(BaseModel):
     request_id: str
     conversation_id: UUID
     user_message: MessageOut
     assistant_message: MessageOut
     provider: ProviderMetadata
+    workflow: WorkflowOut | None = None
+
+
+class ConfirmActionRequest(BaseModel):
+    confirmation_token: str = Field(min_length=16, max_length=256)
+    approved: bool
+
+
+class ConfirmActionResponse(BaseModel):
+    request_id: str
+    conversation_id: UUID
+    assistant_message: MessageOut
+    provider: ProviderMetadata
+    workflow: WorkflowOut
 
 
 class ConversationSummary(BaseModel):

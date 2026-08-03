@@ -157,3 +157,27 @@ Finalized decisions for VaaniDesk. Narrative context remains in [`PLAN.md`](../P
 **Status:** Accepted
 **Decision:** MCP server exposes Puch application tools `validate` and `resume` in addition to support tools. `validate` returns `PUCH_PHONE_NUMBER`. `resume` returns Markdown from `RESUME_MARKDOWN_PATH`. Auth uses `PUCH_APPLICATION_KEY` via the Puch compatibility bearer layer. Never hardcode key, phone, or resume body.
 **Why:** Meet Puch application MCP requirements while keeping secrets and resume content out of source.
+
+---
+
+## ADR-020 — Phase 2 controlled workflow (not an autonomous loop)
+
+**Status:** Accepted
+**Decision:** Phase 2 support handling is an explicit step orchestrator (`language → intent → clarify → allow-listed tool → AuthZ → risk → confirmation → execute → respond → escalate → traces`). No free-running agent loop. Heuristic language/intent detectors sit behind replaceable interfaces.
+**Why:** Auditable, testable steps; deterministic mock demos; safer AuthZ and confirmation gates.
+
+---
+
+## ADR-021 — Public business identifiers
+
+**Status:** Accepted
+**Decision:** Customers see `VD-xxxxx` order refs and `TKT-xxxxx` ticket refs. Internal UUIDs are not required in chat. Lookups always combine authenticated user identity with the public ref.
+**Why:** Prevent IDOR via guessed UUIDs; keep demos readable.
+
+---
+
+## ADR-022 — Confirmation + durable idempotency for high-risk tools
+
+**Status:** Accepted
+**Decision:** High-risk tools use Redis confirmation tokens (fail closed) **and** Postgres `IdempotencyRecord` rows for mutations. The client receives a raw URL-safe token once; Redis stores only `SHA-256(token)` as the key and never persists the raw token in the JSON payload. Tokens bind user, tool, and argument hash; single-use with TTL. Concurrent idempotency inserts use a savepoint and unique constraint so only one winner executes.
+**Why:** Prevent accidental/duplicate destructive actions even under retries, races, or Redis outages after commit.

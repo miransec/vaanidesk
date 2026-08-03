@@ -1,59 +1,60 @@
 # VaaniDesk — Task Tracker
 
-Last updated: 2026-08-03 (Phase 1 implementation)
+Last updated: 2026-08-04 (Phase 2 security/reproducibility verification pass)
 
 Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` risk
 
-**Default branch:** `main`
+**Default branch:** `main`  
+**Tags:** `phase-1-complete`  
+**HEAD at verification:** `3de09ee` (Phase 1 commit); Phase 2 changes uncommitted pending final review
 
 ---
 
 ## Phase 0 — Environment and planning
 
-- [x] Completed and approved (with review corrections)
+- [x] Completed and approved
 
 ---
 
 ## Phase 1 — Working foundation
 
-**Objective:** Stack boots; Phase 1 models only; seed; mock chat via `/api/v1`; tests/lint.
-
-**Prereqs**
-
-- [x] Rename Git default branch to `main`
-- [x] Install **Node.js 24 LTS** (v24.18.1)
-- [x] `uv python install 3.12` (`uv python find 3.12` OK)
-- [x] Docker Desktop engine operational — **B2 resolved**
-
-**Implementation**
-
-- [x] Monorepo Phase 1 structure
-- [x] FastAPI + settings + JSON logging + request IDs
-- [x] Models + Alembic `0001_phase1` applied
-- [x] Compose stack healthy (postgres, redis, backend, frontend)
-- [x] `/health` + `/ready`; `/api/v1` chat
-- [x] Idempotent seed (4 users / 25 products / 50 orders)
-- [x] Mock LLM + Next.js `/` + `/chat`
-- [x] `uv.lock` + `package-lock.json`
-- [x] Unit + integration pytest (13 passed)
-- [x] Ruff check + format
-- [x] mypy via `python -m mypy` (25 files, clean)
-- [x] Frontend lint + production build
-
-**Prove with**
-
-- [x] Compose up healthy
-- [x] Migrations + seed on live DB
-- [x] Frontend → backend live round-trip
-- [x] Multilingual mock responses
-
-**Not in Phase 1:** MCP, RAG tables, SupportTicket, AgentTrace, ToolExecution, evals
+- [x] Completed, committed, tagged `phase-1-complete`
 
 ---
 
-## Phase 2 — Agent and tools (not started)
+## Phase 2 — Agent and tools
 
-- [ ] Deferred until Phase 1 review
+- [x] Implementation (provisionally approved)
+- [x] Security & reproducibility verification pass (2026-08-04)
+
+### Verification results (2026-08-04)
+
+| Check | Result |
+|-------|--------|
+| Migration cycle `0002→0001→0002→0001→0002` | Pass |
+| Seed after cycle | 4 users / 25 products / 50 orders; `VD-10001`… contiguous; unique |
+| Order-ref determinism (value formula, not row order) | Pass (`scripts/verify_phase2_refs.py` + tests) |
+| Confirmation: SHA-256 key at rest; no raw token in payload/logs | Pass |
+| Token bind user/tool/args; expire; single-use; cross-user 403 | Pass |
+| Redis unavailable → HTTP 503 create + confirm; no cancel mutation | Pass |
+| Idempotency once + conflict + cross-user isolation + concurrent single winner | Pass |
+| Direct tool AuthZ (bypass routers) | Pass |
+| Public ref alone cannot bypass ownership | Pass |
+| Trace redaction (tokens/addresses) | Pass |
+| FE contract API: approve/deny/unauthorized/expired/reused/redis-503 | Pass |
+| pytest | **41 passed** |
+| ruff check / format --check | Pass |
+| `python -m mypy app` | Pass |
+| `npm run lint` / `npm run build` | Pass |
+| `docker compose config` / `ps` | Pass (all healthy) |
+
+**Not in Phase 2:** RAG, voice, images, WhatsApp, MCP, evals, dashboard, production auth
+
+---
+
+## Phase 3 — RAG (not started)
+
+- [ ] Deferred until final Phase 2 review
 
 ---
 
@@ -61,14 +62,12 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` 
 
 | ID | Blocker | Needed for | Owner |
 |----|---------|------------|-------|
-| B2 | Docker Desktop engine | ~~Resolved~~ | — |
-| B6 | `uv run mypy` exe shim blocked by App Control; use `uv run python -m mypy` | N/A workaround | Documented |
-| B7 | Integration Postgres | ~~Resolved via Compose~~ | — |
+| B6 | `uv run mypy` shim blocked by App Control; use `uv run python -m mypy` | Documented | — |
 
 ---
 
 ## Notes
 
-- Redis for Windows installed and responds to `PING` locally; Compose Redis still preferred with Docker.
-- Demo auth: `X-Demo-User-Key` / `X-Demo-User-Id` — not production auth.
-- Do not start Phase 2 until Phase 1 review.
+- Confirmation Redis key = `vd:confirm:` + SHA-256(raw token); payload omits raw token.
+- Sensitive tools fail closed with `confirmation_unavailable` (503) when Redis is down.
+- Idempotency unique constraint + savepoint handles concurrent duplicate keys.

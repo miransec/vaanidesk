@@ -6,10 +6,9 @@ from uuid import UUID
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-# Integration tests require a live Postgres matching DATABASE_URL.
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql+asyncpg://vaanidesk:vaanidesk_dev_password@localhost:5432/vaanidesk",
@@ -33,11 +32,6 @@ async def _db_available() -> bool:
         await engine.dispose()
 
 
-@pytest.fixture(scope="session")
-def anyio_backend() -> str:
-    return "asyncio"
-
-
 @pytest.fixture
 async def require_db() -> AsyncIterator[None]:
     if not await _db_available():
@@ -50,11 +44,13 @@ async def client(require_db: None) -> AsyncIterator[AsyncClient]:
     os.environ["DATABASE_URL"] = DATABASE_URL
     os.environ["LLM_PROVIDER"] = "mock"
     from app.core.config import get_settings
+    from app.core.redis import reset_redis
     from app.database.session import get_db, reset_engine
     from app.main import create_app
 
     get_settings.cache_clear()
     reset_engine()
+    await reset_redis()
     settings = get_settings()
     engine = create_async_engine(settings.database_url, pool_pre_ping=True)
     session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
@@ -69,9 +65,25 @@ async def client(require_db: None) -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+    await reset_redis()
     await engine.dispose()
     reset_engine()
     get_settings.cache_clear()
+
+
+async def _owned_order_ref(demo_key: str, preferred_status: str | None = None) -> str:
+    from app.database.session import SessionLocal
+    from app.models import Order, User
+
+    async with SessionLocal() as db:
+        user = (await db.execute(select(User).where(User.demo_key == demo_key))).scalar_one()
+        stmt = select(Order).where(Order.user_id == user.id)
+        if preferred_status:
+            from app.models import OrderStatus
+
+            stmt = stmt.where(Order.status == OrderStatus(preferred_status))
+        order = (await db.execute(stmt.limit(1))).scalar_one()
+        return order.order_number
 
 
 @pytest.mark.asyncio
@@ -93,8 +105,8 @@ async def test_chat_round_trip_and_persistence(client: AsyncClient) -> None:
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["provider"]["is_mock"] is True
-    assert body["provider"]["provider"] == "mock"
     assert "request_id" in body
+    assert body["workflow"]["intent"] == "greeting"
     conversation_id = body["conversation_id"]
 
     listed = await client.get(
@@ -134,14 +146,17 @@ async def test_cross_user_conversation_denied(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_hinglish_mock_via_api(client: AsyncClient) -> None:
+async def test_hinglish_clarification_via_api(client: AsyncClient) -> None:
     res = await client.post(
         "/api/v1/chat/messages",
         json={"content": "mera order kahan hai"},
         headers={"X-Demo-User-Key": "demo-priya"},
     )
     assert res.status_code == 200
-    assert res.json()["provider"]["language_hint"] == "hinglish"
+    body = res.json()
+    assert body["provider"]["language_hint"] == "hinglish"
+    assert body["workflow"]["clarification_required"] is True
+    assert body["workflow"]["intent"] == "order_status"
 
 
 @pytest.mark.asyncio
