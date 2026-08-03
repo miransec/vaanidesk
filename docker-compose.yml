@@ -1,0 +1,72 @@
+# Requires Docker Desktop. Development stack only — not a production deployment.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: vaanidesk
+      POSTGRES_PASSWORD: vaanidesk_dev_password
+      POSTGRES_DB: vaanidesk
+    ports:
+      - "5432:5432"
+    volumes:
+      - vaanidesk_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vaanidesk -d vaanidesk"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: development
+      DEBUG: "true"
+      SECRET_KEY: dev-only-change-me
+      DATABASE_URL: postgresql+asyncpg://vaanidesk:vaanidesk_dev_password@postgres:5432/vaanidesk
+      REDIS_URL: redis://redis:6379/0
+      LLM_PROVIDER: mock
+      CORS_ORIGINS: http://localhost:3000
+      DEMO_MODE: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./sample_data:/app/sample_data:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  vaanidesk_pgdata:

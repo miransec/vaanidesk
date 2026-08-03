@@ -1,0 +1,82 @@
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+secrets/
+credentials/
+# Resume content may be local; keep path configurable — do not commit private resumes
+sample_data/resume/private/
+*.private.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+backend/.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.tox/
+.nox/
+
+# Node / Next.js
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/coverage/
+frontend/.env.local
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+pnpm-lock.yaml
+yarn.lock
+
+# Uploads and local storage
+uploads/
+.tmp/
+.cache/
+data/local/
+
+# Docker / local volumes
+postgres_data/
+redis_data/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Eval artifacts (keep datasets; ignore generated noise)
+evals/reports/*.html
+evals/reports/.tmp/
+!evals/reports/.gitkeep
+
+# Logs
+logs/
+*.log
+
+# Test / coverage
+coverage.xml
+.coverage.*
+
+# Misc
+*.sqlite3
+dump.rdb

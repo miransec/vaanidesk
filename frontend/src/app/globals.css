@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f3f7f5;
+  --foreground: #0f1c1a;
+  --accent: #115e59;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), "Segoe UI", sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.vd-shell {
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(17, 94, 89, 0.16), transparent 60%),
+    radial-gradient(900px 400px at 100% 0%, rgba(15, 118, 110, 0.12), transparent 55%),
+    linear-gradient(180deg, #f7faf8 0%, #eef4f1 100%);
+}
