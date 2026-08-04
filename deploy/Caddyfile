@@ -1,0 +1,56 @@
+# Example Caddyfile for VaaniDesk production deployment.
+# Replace app.example.com with your actual domain.
+# Caddy auto-provisions HTTPS certificates via Let's Encrypt.
+
+app.example.com {
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        -Server
+    }
+
+    # API routes → backend
+    handle /api/* {
+        reverse_proxy backend:8000 {
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # Health/ready/metrics → backend
+    handle /health {
+        reverse_proxy backend:8000
+    }
+    handle /ready {
+        reverse_proxy backend:8000
+    }
+    handle /metrics {
+        reverse_proxy backend:8000
+    }
+
+    # Frontend → Next.js
+    handle {
+        reverse_proxy frontend:3000
+    }
+
+    # Upload size limit (10 MB)
+    request_body {
+        max_size 10MB
+    }
+
+    # Timeouts
+    reverse_proxy backend:8000 {
+        transport http {
+            read_timeout 60s
+            write_timeout 60s
+        }
+    }
+}
+
+# HTTP → HTTPS redirect (automatic with Caddy)
+http://app.example.com {
+    redir https://app.example.com{uri} permanent
+}

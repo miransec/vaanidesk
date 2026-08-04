@@ -1,5 +1,10 @@
-"""SQLAlchemy models — Phase 1–6: entities, knowledge, voice, channels, evaluations."""
+"""SQLAlchemy models — Phase 1–7: entities, knowledge, voice, channels, evaluations, auth."""
 
+from app.models.auth import (
+    AuthAuditEvent,
+    RefreshSession,
+    UserRole,
+)
 from app.models.channels import (
     AttachmentScanStatus,
     ChannelAttachment,
@@ -78,6 +83,9 @@ from app.models.voice import (
 )
 
 __all__ = [
+    "AuthAuditEvent",
+    "RefreshSession",
+    "UserRole",
     "AttachmentScanStatus",
     "ChannelAttachment",
     "ChannelConnection",

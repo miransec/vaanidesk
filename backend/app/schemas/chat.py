@@ -128,6 +128,6 @@ class DemoUserOut(BaseModel):
     id: UUID
     email: str
     display_name: str
-    demo_key: str
+    demo_key: str | None = None
 
     model_config = {"from_attributes": True}

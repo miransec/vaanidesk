@@ -1,245 +1,97 @@
-# VaaniDesk Architecture
+# VaaniDesk — Architecture
 
-**Phase:** 4 (voice transport + knowledge/RAG + tools)
-**Companion docs:** [`../PLAN.md`](../PLAN.md), [`../TASKS.md`](../TASKS.md), [`ADR.md`](./ADR.md), [`API.md`](./API.md)
+## System Overview
 
----
+VaaniDesk is a multilingual AI customer support platform supporting text chat, voice, and omnichannel communication (email, WhatsApp).
 
-## Phase 2 agent workflow
-
-```mermaid
-flowchart TD
-  A[Receive chat message] --> B[Demo auth]
-  B --> C[Normalize + conversation]
-  C --> D[Detect language/script]
-  D --> E[Classify intent + entities]
-  E --> F{Missing fields?}
-  F -->|yes| G[Clarification response]
-  F -->|no| H{Confidence OK?}
-  H -->|no| I[Escalate via transfer_to_human]
-  H -->|yes| J[Select allow-listed tool]
-  J --> K[Validate args + AuthZ]
-  K --> L{High risk?}
-  L -->|yes| M[Create Redis confirmation]
-  M --> N[confirmation_required]
-  L -->|no| O[Idempotency check]
-  O --> P[Execute tool]
-  P --> Q[Grounded multilingual response]
-  Q --> R[Persist AgentTrace + ToolExecution]
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐
+│   Browser   │────▶│   Caddy      │────▶│   Next.js    │
+│   (SPA)     │     │   (HTTPS)    │     │   Frontend   │
+└─────────────┘     └──────┬───────┘     └──────────────┘
+                           │
+                    ┌──────▼───────┐
+                    │   FastAPI    │
+                    │   Backend    │
+                    └──┬───────┬──┘
+                       │       │
+              ┌────────▼──┐  ┌─▼────────┐
+              │ PostgreSQL │  │  Redis   │
+              │ + pgvector │  │          │
+              └───────────┘  └──────────┘
 ```
 
-## Confirmation flow
+## Backend Architecture
 
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant API as FastAPI
-  participant W as Workflow
-  participant R as Redis
-  participant DB as Postgres
-  U->>API: cancel order VD-10001
-  API->>W: run_support_workflow
-  W->>R: SET confirm token TTL
-  W-->>U: confirmation_required + summary
-  U->>API: POST /actions/confirm approved
-  API->>R: GET AuthZ DELETE token
-  API->>DB: idempotency + cancel_order
-  API-->>U: cancelled + trace
+### Layer Structure
+
+```
+app/
+├── api/v1/          # HTTP route handlers (thin controllers)
+│   ├── auth.py      # Registration, login, refresh, sessions
+│   ├── chat.py      # Conversations, messages, confirmations
+│   ├── knowledge.py # Document ingestion, retrieval
+│   ├── voice.py     # Audio upload, STT/TTS, transcript flow
+│   ├── channels.py  # Omnichannel connections, webhooks
+│   └── evaluations.py # Eval datasets, runs, alerts, audit
+├── services/        # Business logic layer
+│   ├── auth.py      # Auth service (Argon2id, JWT, sessions)
+│   ├── chat.py      # Chat orchestration
+│   └── evaluations.py # Eval runner coordination
+├── models/          # SQLAlchemy ORM models
+│   ├── entities.py  # Users, conversations, orders, tickets
+│   ├── auth.py      # RefreshSession, AuthAuditEvent
+│   ├── knowledge.py # Documents, chunks, embeddings
+│   ├── voice.py     # VoiceMessage, SpeechSynthesis
+│   ├── channels.py  # Channel connections, events, handoff
+│   └── evaluations.py # Datasets, runs, alerts, audit log
+├── agents/          # Intent detection, language detection, response
+├── workflows/       # Tool orchestration, confirmation flow
+├── providers/       # LLM/STT/TTS provider abstraction (mock default)
+├── security/        # Confirmation tokens, redaction
+├── observability/   # Metrics, tracing, structured logging
+├── core/            # Config, errors, middleware, Redis
+└── database/        # Session factory, Base class
 ```
 
-## Tool execution flow
+### Authentication Flow
 
-```mermaid
-flowchart LR
-  Intent --> Registry
-  Registry -->|unknown name| Reject
-  Registry -->|known| Validate
-  Validate --> Ownership
-  Ownership -->|fail| NotFound
-  Ownership -->|ok| Risk
-  Risk -->|high| Confirm
-  Risk -->|low/mod| Idempotency
-  Confirm --> Idempotency
-  Idempotency --> Handler
-  Handler --> Trace
+```
+Register → hash(pepper + password) → store Argon2id hash → return profile
+
+Login → verify hash → create JWT access (15 min) + refresh session (7 day)
+      → set refresh in HttpOnly cookie → return access token
+
+Refresh → validate old refresh → revoke old → create new pair → rotate cookie
+
+Logout → revoke refresh session → clear cookie
 ```
 
-## Cross-user authorization boundary
+### Key Design Decisions
 
-```mermaid
-flowchart TB
-  subgraph caller [Authenticated demo user]
-    U1[User A]
-  end
-  subgraph store [Data]
-    OA[Order VD-10001 owner A]
-    OB[Order VD-10005 owner B]
-  end
-  U1 -->|"user_id + VD-10001"| OA
-  U1 -->|"user_id + VD-10005"| X[404 order_not_found]
-  OB -.->|never returned| U1
-```
+1. **Mock-first providers**: All AI providers default to deterministic mocks for testing
+2. **Service layer auth**: Role checks in services, not just API layer
+3. **Ownership enforcement**: Users can only access their own resources
+4. **Fail-closed Redis**: Security features require Redis availability
+5. **Structured logging**: JSON format with secret redaction filters
 
-## Design principles
+## Frontend Architecture
 
-1. Controlled workflow — explicit steps, not an unbounded autonomous agent loop
-2. Allow-listed tools only
-3. User-data isolation — ownership checks in tool/service layer
-4. Fail closed on Redis security paths
-5. Idempotent sensitive mutations
-6. Honest demos — no fake live human agents
+Next.js 15 App Router with:
+- Server components where possible
+- Client components for interactive features (chat, voice, auth)
+- Token stored in memory (not localStorage)
+- Refresh via HttpOnly cookie
+- Tailwind CSS for styling
 
-## Language detector limitations
+## Database
 
-Heuristic script + cue matching for `en` / `hi` / `hinglish` / `mr` / `unknown`. Not a production language model. Replaceable via `LanguageDetector` protocol.
+PostgreSQL 16 with pgvector extension for embedding storage.
+Migrations managed by Alembic (0001–0007).
 
-## Intent taxonomy
+## Observability
 
-`greeting`, `order_status`, `order_details`, `update_delivery_address`, `cancellation_eligibility`, `cancel_order`, `create_support_ticket`, `support_ticket_status`, `human_escalation`, `policy_question`, `unknown`
-
-## Tool registry (Phase 2)
-
-| Tool | Risk | Confirmation | Idempotency |
-|------|------|--------------|-------------|
-| get_order_status | low | no | no |
-| get_order_details | moderate | no | no |
-| update_delivery_address | high | yes | yes |
-| check_cancellation_eligibility | low | no | no |
-| cancel_order | high | yes | yes |
-| create_support_ticket | moderate | no | yes |
-| get_support_ticket_status | low | no | no |
-| transfer_to_human | moderate | no | yes |
-
-## Phase 3 knowledge / retrieval
-
-```mermaid
-flowchart TD
-  U[Upload md/text/json] --> V[Validate MIME + size]
-  V --> H[Content hash]
-  H --> D{Duplicate version?}
-  D -->|yes| Skip[Skip duplicate]
-  D -->|no| N[Normalize + language]
-  N --> C[Deterministic chunk]
-  C --> E[Mock lexical embed + tsvector]
-  E --> S[Store version + chunks]
-  S --> A[Activate version]
-  Q[Policy query] --> ACL[SQL access filter]
-  ACL --> K[Keyword FTS]
-  ACL --> Vec[pgvector cosine]
-  K --> RRF[RRF fusion k=60]
-  Vec --> RRF
-  RRF --> RR{Rerank?}
-  RR -->|optional| MockRR[Mock lexical rerank]
-  RR --> Conf{Confidence >= threshold?}
-  MockRR --> Conf
-  Conf -->|no| NA[No-answer + escalate offer]
-  Conf -->|yes| Cite[Grounded answer + citations]
-```
-
-### Ingestion lifecycle
-
-receive → validate type/size → hash → duplicate detect → normalize → language → chunk → embed → tsvector → store → activate → record job
-
-### Chunking
-
-Heading / blank-line aware windows (~500 chars, ~60 overlap). Same input → same chunks.
-
-### Embeddings
-
-`LexicalHashEmbeddingProvider`: word uni/bigrams + char 3-grams → stable feature hash → L2-normalized 384-d vectors.
-
-**Label:** Deterministic lexical embedding baseline for local development and testing — not production semantic embeddings.
-
-### Retrieval strategies
-
-1. `keyword` — PostgreSQL `plainto_tsquery('simple')` + `ts_rank`
-2. `vector` — pgvector cosine distance on mock embeddings
-3. `hybrid` — independent candidate lists fused with RRF: `score(d) = Σ 1/(k + rank_i(d))`, `k=60`
-4. `hybrid_rerank` — hybrid then `RerankingProvider` (mock lexical overlap)
-
-Access filters (`document_visible_to`) apply **inside** SQL before candidates leave Postgres. Unauthorized chunks never reach fusion, rerank, model context, citations, or trace text bodies.
-
-### Citations / no-answer
-
-Citations include title, version, section/chunk label, chunk id, source type, score. Only retrieved chunks are cited.
-
-If normalized confidence &lt; `RAG_MIN_RETRIEVAL_CONFIDENCE` (default 0.30): no invented policy, empty citations, `no_answer_reason` stored on `RetrievalTrace`.
-
-Later phases add MCP and evals — see PLAN.md.
-
----
-
-## Phase 4 voice transport
-
-```mermaid
-flowchart TD
-  Mic[Browser mic / file upload] --> Val[Validate format + size + duration]
-  Val -->|invalid| Rej[400 rejection]
-  Val -->|ok| Store[AudioStorage local FS]
-  Store --> STT[DeterministicMockSTT]
-  STT --> Conf{Confidence >= threshold?}
-  Conf -->|high + non-sensitive| Auto[Auto-submit to orchestrator]
-  Conf -->|low or sensitive| Show[Display transcript for confirmation]
-  Show --> Edit[User may edit]
-  Edit --> Bind[Confirm: bind transcript hash]
-  Bind --> Sub[Submit confirmed text to orchestrator]
-  Sub --> Resp[Orchestrator response]
-  Resp --> TTS[DeterministicMockTTS]
-  TTS --> Play[Audio playback to client]
-```
-
-### Voice module layout
-
-```text
-backend/app/voice/
-├── __init__.py
-├── stt.py            # DeterministicMockSTT provider
-├── tts.py            # DeterministicMockTTS provider
-├── validation.py     # format/size/duration checks
-├── storage.py        # AudioStorage (local FS, retention cleanup)
-└── rate_limit.py     # per-user voice rate limiting
-```
-
-### Key design decisions
-
-- Voice is a **transport** — audio becomes text that enters the same controlled orchestrator
-- Transcript confirmation prevents accidental sensitive-action execution from mis-transcription
-- Rate limiting: uploads/min, bytes/hour, STT requests/min, TTS requests/min, max concurrent jobs
-- Audio retention is time-bounded (`AUDIO_RETENTION_HOURS`); cleanup endpoint removes expired files
-- No raw audio stored in agent traces — only transcript text and metadata
-
----
-
-## Phase 5 — Omnichannel Communication
-
-### Channel adapter boundary
-
-```text
-backend/app/channels/
-├── __init__.py
-├── base.py             # ChannelAdapter protocol/ABC
-├── signatures.py       # HMAC verify (constant-time, timestamp tolerance, replay store)
-├── pipeline.py         # Inbound: size→verify→parse→dedupe→normalize→identity→conversation→orchestrator
-├── outbox.py           # Transactional outbox: deliver, retry, dead-letter
-├── renderers.py        # Channel-specific: web, email plain+HTML, whatsapp concise
-├── attachments.py      # Validate size/MIME/signature; reject executables
-├── linking.py          # Identity link challenges (create, complete, expire, unlink)
-├── handoff.py          # Human escalation queue management
-├── web.py              # Thin adapter (web chat uses REST API directly)
-├── email/
-│   ├── adapter.py      # MIME parse, HTML sanitize, subject threading, message-id dedup
-│   └── dev_inbox.py    # Deterministic dev inbox (no real SMTP)
-└── whatsapp/
-    ├── adapter.py      # Meta-style webhook schema, verify challenge, normalize
-    └── simulator.py    # Local/dev simulator with valid HMAC signatures
-```
-
-### Key design decisions
-
-- All normalized inbound calls the existing conversation + orchestrator path — model never sees raw webhooks
-- Sensitive write intents from external channels require ExternalConfirmationRequest (signed one-time web link)
-- Unlinked identities get limited anonymous/support only — cannot access account orders
-- HMAC verification fails closed: missing sig, stale timestamp, or replay all reject
-- Transactional outbox with exponential backoff retry (max attempts configurable)
-- Human handoff queue pauses auto-responses when assigned
-- Attachments validated for size, MIME type, and extension; executables blocked
+- Prometheus metrics at `/metrics`
+- OpenTelemetry tracing boundaries (console/no-op by default)
+- Structured JSON logs with secret redaction
+- Alert rules for error rate, latency, provider failures

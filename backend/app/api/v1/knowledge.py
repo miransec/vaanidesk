@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_demo_user, get_request_id
+from app.api.deps import get_current_user, get_request_id
 from app.database.session import get_db
 from app.models import User
 from app.schemas.knowledge import (
@@ -31,7 +31,7 @@ router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 async def create_knowledge_document(
     payload: KnowledgeDocumentCreate,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> IngestResultOut:
     return await knowledge_service.create_document(db=db, payload=payload)
 
@@ -39,7 +39,7 @@ async def create_knowledge_document(
 @router.get("/documents", response_model=list[KnowledgeDocumentOut])
 async def list_knowledge_documents(
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> list[KnowledgeDocumentOut]:
     return await knowledge_service.list_documents(db=db)
 
@@ -48,7 +48,7 @@ async def list_knowledge_documents(
 async def get_knowledge_document(
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> KnowledgeDocumentDetail:
     return await knowledge_service.get_document(db=db, document_id=document_id)
 
@@ -57,7 +57,7 @@ async def get_knowledge_document(
 async def list_knowledge_versions(
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> list[KnowledgeVersionOut]:
     return await knowledge_service.list_versions(db=db, document_id=document_id)
 
@@ -67,7 +67,7 @@ async def activate_knowledge_version(
     document_id: UUID,
     payload: ActivateVersionRequest,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     return await knowledge_service.activate_document_version(
         db=db, document_id=document_id, payload=payload
@@ -78,7 +78,7 @@ async def activate_knowledge_version(
 async def deactivate_knowledge_document(
     document_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     return await knowledge_service.deactivate_doc(db=db, document_id=document_id)
 
@@ -88,7 +88,7 @@ async def reindex_knowledge_version(
     document_id: UUID,
     version_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     return await knowledge_service.reindex_document_version(
         db=db, document_id=document_id, version_id=version_id
@@ -99,7 +99,7 @@ async def reindex_knowledge_version(
 async def test_retrieval(
     payload: RetrievalTestRequest,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
 ) -> RetrievalTestResponse:
     return await knowledge_service.run_retrieval_test(
@@ -111,6 +111,6 @@ async def test_retrieval(
 async def get_retrieval_trace(
     trace_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> RetrievalTraceOut:
     return await knowledge_service.get_retrieval_trace(db=db, user=user, trace_id=trace_id)

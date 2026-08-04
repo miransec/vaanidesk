@@ -1,73 +1,147 @@
-# API Documentation — Phase 4
+# VaaniDesk — API Reference
 
-OpenAPI from FastAPI is available at `/docs` when the backend is running.
+Base URL: `http://localhost:8000` (development) or your production domain.
 
-## Versioning
+All versioned endpoints live under `/api/v1`.
 
-| Surface | Path | Versioned |
-|---------|------|-----------|
-| Business APIs | `/api/v1/...` | Yes |
-| Liveness | `/health` | No |
-| Readiness | `/ready` | No |
+## Authentication
 
-## Demo authentication (not production)
+### POST /api/v1/auth/register
+Create a new user account.
 
-- Header `X-Demo-User-Key: demo-anya` (or `demo-rahul`, `demo-priya`, `demo-arjun`)
-- Optional: `Idempotency-Key` for state-changing tool paths.
+**Body:** `{ "email": "user@example.com", "password": "min8chars", "display_name": "Name" }`
+**Response:** `201` with `UserProfile`
+
+### POST /api/v1/auth/login
+Authenticate and receive tokens.
+
+**Body:** `{ "email": "user@example.com", "password": "password" }`
+**Response:** `200` with `{ "access_token": "...", "token_type": "bearer", "expires_in": 900 }`
+**Cookie:** `refresh_token` (HttpOnly, Secure in production)
+
+### POST /api/v1/auth/refresh
+Rotate refresh token and get new access token.
+
+**Cookie required:** `refresh_token`
+**Response:** `200` with new `TokenResponse`
+
+### POST /api/v1/auth/logout
+Revoke current refresh session.
+
+**Headers:** `Authorization: Bearer <token>`
+**Response:** `204`
+
+### POST /api/v1/auth/logout-all
+Revoke all refresh sessions.
+
+**Headers:** `Authorization: Bearer <token>`
+**Response:** `204`
+
+### GET /api/v1/auth/me
+Get current user profile.
+
+**Headers:** `Authorization: Bearer <token>`
+**Response:** `200` with `UserProfile`
+
+### POST /api/v1/auth/password
+Change password (invalidates all sessions).
+
+**Headers:** `Authorization: Bearer <token>`
+**Body:** `{ "current_password": "old", "new_password": "new8chars" }`
+**Response:** `204`
+
+### GET /api/v1/auth/sessions
+List active refresh sessions.
+
+**Headers:** `Authorization: Bearer <token>`
+**Response:** `200` with `SessionInfo[]`
+
+### DELETE /api/v1/auth/sessions/{session_id}
+Revoke a specific session.
+
+**Headers:** `Authorization: Bearer <token>`
+**Response:** `204`
 
 ## Chat
 
-`POST /api/v1/chat/messages` — controlled workflow (tools + hybrid RAG). Unchanged from Phase 3 for text.
+### POST /api/v1/chat/messages
+Send a message and receive AI response.
+
+### POST /api/v1/actions/confirm
+Confirm or deny a pending action.
+
+### GET /api/v1/conversations
+List user conversations.
+
+### GET /api/v1/conversations/{id}
+Get conversation detail with messages.
 
 ## Knowledge
 
-See Phase 3 routes under `/api/v1/knowledge/...`.
+### GET /api/v1/knowledge/documents
+List knowledge documents.
 
-## Voice (`/api/v1/voice`)
+### POST /api/v1/knowledge/documents
+Ingest a new document.
 
-Voice is a transport into the existing orchestrator. Default STT/TTS are **deterministic mocks**.
+### POST /api/v1/knowledge/retrieval/test
+Test retrieval against knowledge base.
 
-| Method | Path | Notes |
-|--------|------|-------|
-| POST | `/voice/upload` | multipart audio; validates type/size/duration |
-| POST | `/voice/messages/{id}/transcribe` | mock STT; optional auto-submit when confidence high and not sensitive |
-| GET | `/voice/messages/{id}` | status + transcript metadata |
-| POST | `/voice/messages/{id}/confirm` | bind transcript hash |
-| POST | `/voice/messages/{id}/edit` | edit transcript; invalidates confirmation |
-| POST | `/voice/messages/{id}/submit` | submit confirmed text to orchestrator |
-| POST | `/voice/tts` | mock TTS for assistant message |
-| GET | `/voice/messages/{id}/download` | authorized recording playback |
-| GET | `/voice/synthesis/{id}/download` | authorized TTS playback |
-| DELETE | `/voice/messages/{id}` | delete recording |
-| POST | `/voice/cleanup` | expired audio cleanup |
+## Voice
 
-Sensitive intents always require transcript confirmation before submit. Editing invalidates prior confirmation.
+### POST /api/v1/voice/upload
+Upload audio file for transcription.
 
----
+### POST /api/v1/voice/messages/{id}/transcribe
+Trigger STT transcription.
 
-## Phase 5 — Channels (prefix: `/channels`)
+### POST /api/v1/voice/tts
+Request text-to-speech synthesis.
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/channels/connections` | list channel connections |
-| POST | `/channels/connections/{id}/toggle` | enable/disable connection |
-| POST | `/channels/webhook/email` | inbound email webhook |
-| POST | `/channels/webhook/whatsapp` | inbound WhatsApp webhook |
-| GET | `/channels/webhook/whatsapp` | WhatsApp verification challenge |
-| POST | `/channels/simulator/email` | dev email simulator |
-| POST | `/channels/simulator/whatsapp` | dev WhatsApp simulator |
-| POST | `/channels/identity/link` | create identity link challenge |
-| POST | `/channels/identity/link/complete` | complete link with token |
-| POST | `/channels/identity/unlink` | unlink identity |
-| GET | `/channels/confirm` | get external confirmation details |
-| POST | `/channels/confirm` | confirm/deny external action |
-| GET | `/channels/outbound/failed` | list failed outbound messages |
-| POST | `/channels/outbound/{id}/retry` | retry failed message |
-| GET | `/channels/handoff` | list human handoff queue |
-| POST | `/channels/handoff/{id}/assign` | assign to agent |
-| GET | `/channels/events` | list inbound events |
-| GET | `/channels/attachments/{id}` | authorized attachment download |
-| POST | `/channels/seed` | seed default connections |
+## Channels
 
-Webhooks do not require demo auth. Simulator and management endpoints require X-Demo-User-Key.
-Sensitive actions from external channels require authenticated web confirmation (one-time signed link).
+### GET /api/v1/channels/connections
+List channel connections.
+
+### POST /api/v1/channels/simulator/email
+Simulate inbound email event.
+
+### POST /api/v1/channels/simulator/whatsapp
+Simulate inbound WhatsApp event.
+
+## Evaluations
+
+### GET /api/v1/evaluations/datasets
+List evaluation datasets.
+
+### POST /api/v1/evaluations/runs
+Trigger evaluation run.
+
+## Operations
+
+### GET /health
+Liveness check.
+
+### GET /ready
+Readiness check (DB + Redis).
+
+### GET /metrics
+Prometheus-compatible metrics.
+
+## Error Format
+
+All errors return:
+```json
+{
+  "error": {
+    "code": "error_code",
+    "message": "Human-readable message",
+    "request_id": "uuid"
+  }
+}
+```
+
+## Authentication Methods
+
+1. **Bearer token** (production): `Authorization: Bearer <access_token>`
+2. **Demo header** (development only, when `DEMO_MODE=true`): `X-Demo-User-Key: demo-anya`

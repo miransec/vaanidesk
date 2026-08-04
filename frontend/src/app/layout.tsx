@@ -39,6 +39,8 @@ export default function RootLayout({
               <Link href="/admin/evaluations">Evaluations</Link>
               <Link href="/admin/observability">Observability</Link>
               <Link href="/admin/audit">Audit</Link>
+              <Link href="/account">Account</Link>
+              <Link href="/login">Login</Link>
             </div>
           </nav>
           {children}

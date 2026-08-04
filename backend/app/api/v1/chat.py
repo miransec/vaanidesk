@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Header
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_demo_user, get_request_id
+from app.api.deps import get_current_user, get_request_id
 from app.database.session import get_db
 from app.models import User
 from app.schemas.chat import (
@@ -34,7 +34,7 @@ async def list_demo_users(db: AsyncSession = Depends(get_db)) -> list[DemoUserOu
 async def post_chat_message(
     payload: ChatMessageCreate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> ChatMessageResponse:
@@ -51,7 +51,7 @@ async def post_chat_message(
 async def post_confirm_action(
     payload: ConfirmActionRequest,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> ConfirmActionResponse:
@@ -67,7 +67,7 @@ async def post_confirm_action(
 @router.get("/conversations", response_model=list[ConversationSummary])
 async def get_conversations(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> list[ConversationSummary]:
     return await chat_service.list_conversations(db=db, user=user)
 
@@ -76,6 +76,6 @@ async def get_conversations(
 async def get_conversation(
     conversation_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> ConversationDetail:
     return await chat_service.get_conversation(db=db, user=user, conversation_id=conversation_id)

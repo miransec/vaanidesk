@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
     # Stored as CSV/JSON string in env; exposed as list via property helpers used by app.
     cors_origins: str = "http://localhost:3000"
-    trusted_hosts: str = "localhost,127.0.0.1"
+    trusted_hosts: str = "localhost,127.0.0.1,test,testserver"
     log_level: str = "INFO"
     log_format: Literal["json", "text"] = "json"
 
@@ -58,9 +58,22 @@ class Settings(BaseSettings):
 
     demo_mode: bool = True
     seed_on_startup: bool = False
-    # Directory containing policies/manifest.json. Empty/unset → host repo fallback.
-    # Compose sets /sample_data/policies with ./sample_data mounted at /sample_data.
     knowledge_seed_dir: str | None = None
+
+    # Phase 7 — auth
+    jwt_secret_key: str = "change-me-jwt-secret-at-least-32-chars"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 7
+    password_pepper: str = "change-me-pepper-at-least-16-chars"
+    max_failed_login_attempts: int = 5
+    login_lockout_minutes: int = 15
+    login_rate_limit_per_minute: int = 10
+    secure_cookies: bool = False
+    cookie_samesite: Literal["lax", "strict", "none"] = "lax"
+    csrf_enabled: bool = True
+    max_request_body_bytes: int = 2_097_152
+    rate_limit_per_minute: int = 60
 
     confirmation_token_ttl_seconds: int = 600
     idempotency_record_ttl_days: int = 30

@@ -4,30 +4,32 @@
 
 VaaniDesk is a production-shaped AI customer-support platform for a fictional e-commerce company (portfolio project for **Puch AI**).
 
-> **Status:** Phase 6 (evaluations / observability) in progress. Phase 5 complete (127 tests). Tagged baselines: `phase-1-complete` through `phase-5-complete`.
+> **Status:** v1.0.0 — Phase 7 (production auth, security, deployment) complete. All quality gates green. Tagged baselines: `phase-1-complete` through `phase-7-complete`, `v1.0.0`.
 
 **Default Git branch:** `main`
 
 ---
 
-## What works now (Phases 1–6)
+## What works now (Phases 1–7)
 
-- FastAPI `/health`, `/ready`, `/metrics`, `/api/v1` chat + confirm + **knowledge** + **voice** + **channels** + **evaluations** APIs
+- **Authentication** (Phase 7): Argon2id password hashing + server-side pepper, JWT access tokens (Bearer), refresh token rotation with reuse detection, HttpOnly cookie refresh, login/register/logout/logout-all, password change, session listing + revocation, brute-force lockout
+- **Roles**: customer / support_agent / administrator with service-layer enforcement
+- **Security hardening**: strict CORS, trusted-host, CSP/X-Frame/MIME-sniff/referrer headers, CSRF for cookie auth, request-size limits, config validation rejecting weak secrets in production
+- **Production deployment**: multi-stage Docker, non-root containers, docker-compose.prod.yml with Caddy reverse proxy (HTTPS), read-only FS, health checks
+- **CI/CD**: GitHub Actions for backend (lint, format, mypy, pytest, audit) + frontend (lint, build, audit) + security scan + Docker integration
+- **Scripts**: backup (pg_dump), restore (pg_restore), retention cleanup (sessions, audio, confirmations)
+- FastAPI `/health`, `/ready`, `/metrics`, `/api/v1` chat + confirm + **knowledge** + **voice** + **channels** + **evaluations** + **auth** APIs
 - Explicit workflow: language → intent → **tools or RAG** → AuthZ → confirmation → traces
 - Tools: order status/details, address update, cancel eligibility/cancel, tickets, human queue
 - Knowledge: Markdown/text/JSON ingest, versions, deterministic mock embeddings, FTS + pgvector, hybrid RRF, optional mock rerank
 - Citations, configurable no-answer threshold, advisory injection scanning
-- In-SQL document access control (public / authenticated / restricted allowlist)
-- Knowledge seed path via `KNOWLEDGE_SEED_DIR` (Compose: `/sample_data/policies`; host fallback to repo `sample_data/policies`)
 - **Voice** (Phase 4): upload → mock STT → transcript confirm → submit to orchestrator; mock TTS for responses
-- Voice features: `VOICE_ENABLED` toggle, local `AudioStorage`, per-user rate limiting, transcript confirmation for sensitive intents
-- **Channels** (Phase 5): omnichannel adapters (email dev inbox, WhatsApp simulator, web passthrough), HMAC-verified webhooks, inbound pipeline with dedup, identity linking, external confirmation for sensitive actions, transactional outbox, human handoff queue
-- **Evaluations** (Phase 6): 113-case multilingual eval dataset, deterministic runner with JSON/Markdown export, comparison/regression detection, CI-friendly CLI
-- **Observability** (Phase 6): OpenTelemetry tracing (console/no-op), Prometheus `/metrics`, structured logging with secret redaction, operational snapshots
-- **Alert rules** (Phase 6): configurable conditions (error rate, latency, provider failure, unauthorized, eval security regression), audit log
-- Next.js `/chat`, `/knowledge`, `/channels`, `/admin/evaluations`, `/admin/observability`, `/admin/audit` pages
-- Compose: postgres (pgvector), redis, backend, frontend
-- `docker-compose.test.yml` for isolated test runs
+- **Channels** (Phase 5): omnichannel adapters (email dev inbox, WhatsApp simulator, web passthrough), HMAC-verified webhooks, identity linking, human handoff queue
+- **Evaluations** (Phase 6): 113-case multilingual eval dataset, deterministic runner, comparison/regression detection
+- **Observability** (Phase 6): OpenTelemetry tracing, Prometheus `/metrics`, structured logging with secret redaction, alert rules
+- Next.js `/login`, `/account`, `/chat`, `/knowledge`, `/channels`, `/admin/*` pages
+- Compose: postgres (pgvector), redis, backend, frontend, caddy (production)
+- `docker-compose.test.yml` for isolated CI test runs
 
 ---
 

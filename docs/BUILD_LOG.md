@@ -205,5 +205,105 @@ Do not store secrets in this file.
 
 ---
 
+## Phase 7 — Production auth, security & deployment
+
+### Start
+- Base commit: `11d8c3a` (tag `phase-6-complete`)
+- Existing tests: 172 passed, 0 skipped
+
+### Implementation
+
+#### Authentication
+- Argon2id password hashing with server-side pepper (HMAC-SHA256)
+- JWT access tokens (HS256, 15-min expiry, Bearer header)
+- Refresh token rotation with SHA-256 hashing and family-based reuse detection
+- HttpOnly cookie for refresh token (Secure in production, SameSite=lax)
+- Registration, login, logout, logout-all, password change
+- Session listing and revocation
+- Brute-force lockout (5 attempts → 15 min lock, configurable)
+- Auth audit events
+
+#### Roles
+- UserRole enum: customer, support_agent, administrator
+- Service-layer enforcement via `require_role()` dependency
+- All API endpoints migrated from `get_demo_user` to `get_current_user` (Bearer + demo fallback)
+
+#### Security hardening
+- SecurityHeadersMiddleware: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS
+- CsrfMiddleware: Origin validation for cookie-authenticated state-changing requests
+- RequestSizeLimitMiddleware: configurable max body size
+- TrustedHostMiddleware enabled
+- Strict CORS with explicit methods/headers (no wildcard in production)
+- Config validation: rejects placeholder secrets, insecure cookies, debug in production
+- Docs/Redoc hidden when DEBUG=false
+
+#### Database
+- Migration 0007: `password_hash`, `role`, `is_disabled`, `failed_login_attempts`, `locked_until` on users; `refresh_sessions` and `auth_audit_events` tables
+- `demo_key` column changed to nullable (production users may not have demo keys)
+
+#### Containers & deployment
+- docker-compose.prod.yml: backend, frontend, worker, postgres, redis, caddy
+- Caddy reverse proxy with HTTPS, security headers, upload limits
+- Worker container for retention cleanup
+- Non-root containers, read-only FS, health checks
+
+#### CI/CD
+- `.github/workflows/ci.yml`: backend (ruff, format, mypy, pytest), frontend (lint, build), security (gitleaks), integration (Docker test stack)
+
+#### Scripts
+- `scripts/backup.py`: pg_dump wrapper with timestamp naming
+- `scripts/restore.py`: pg_restore with verification
+- `scripts/retention_cleanup.py`: expire sessions, old audio, confirmation tokens
+
+#### Frontend
+- Login page (`/login`): register/sign-in toggle, demo mode link
+- Account page (`/account`): profile, password change, session management
+- Auth library (`lib/auth.ts`): token in memory, refresh flow, no localStorage
+
+#### Documentation
+- SECURITY.md, ARCHITECTURE.md, API.md, DEPLOYMENT.md, BACKUP_RESTORE.md, DEMO.md
+- CONTRIBUTING.md, LICENSE (MIT), CHANGELOG.md
+- Updated README, TASKS, BUILD_LOG
+
+### Quality gates (Phase 7 completion)
+
+| Check | Result |
+|-------|--------|
+| `uv run pytest -rs` | **197 passed, 0 failed** (172 prior + 25 Phase 7) |
+| `ruff check .` | Pass (130 files) |
+| `ruff format --check .` | Pass (130 files already formatted) |
+| `python -m mypy app` | Pass (pre-existing untyped decorator warnings only) |
+| Frontend `npm run lint` | Pass (0 errors) |
+| Frontend `npm run build` | Pass (13 static pages) |
+
+### New files
+- `backend/app/models/auth.py`
+- `backend/app/services/auth.py`
+- `backend/app/schemas/auth.py`
+- `backend/app/api/v1/auth.py`
+- `backend/app/core/security.py`
+- `backend/alembic/versions/0007_phase7_auth.py`
+- `backend/scripts/backup.py`
+- `backend/scripts/restore.py`
+- `backend/scripts/retention_cleanup.py`
+- `backend/tests/test_phase7_auth.py`
+- `frontend/src/lib/auth.ts`
+- `frontend/src/app/login/page.tsx`
+- `frontend/src/app/account/page.tsx`
+- `docker-compose.prod.yml`
+- `deploy/Caddyfile`
+- `.github/workflows/ci.yml`
+- `docs/SECURITY.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DEPLOYMENT.md`
+- `docs/BACKUP_RESTORE.md`, `docs/DEMO.md`
+- `CONTRIBUTING.md`, `LICENSE`, `CHANGELOG.md`
+
+### Known limitations
+- E2E tests (Playwright) documented as requirement but not implemented (heavyweight for CI without browser infra)
+- All providers remain deterministic mocks — production would need real LLM/STT/TTS integration
+- Rate limiting is request-size-based; per-IP sliding window requires Redis middleware (documented, not wired)
+- Encrypted credential storage uses established Argon2id + pepper; DB-level column encryption deferred
+
+---
+
 _Results appended at each phase checkpoint._
 

@@ -1,15 +1,16 @@
 ﻿# VaaniDesk — Task Tracker
 
-Last updated: 2026-08-04 (Phase 6 complete; Phase 7 in progress)
+Last updated: 2026-08-04 (Phase 7 complete; v1.0.0 released)
 
 Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` risk
 
 **Default branch:** `main`
-**Tags:** `phase-1-complete`, `phase-2-complete`, `phase-3-complete`, `phase-4-complete`, `phase-5-complete, phase-6-complete`
-**Phase 3:** complete
+**Tags:** `phase-1-complete` through `phase-7-complete`, `v1.0.0`
 **Phase 4:** complete (`0e05e4c`, tag `phase-4-complete`) — 86 tests passed, 0 skipped
 **Phase 5:** complete (`fc8ec61`, tag `phase-5-complete`) — 127 tests passed, 0 skipped
-**Phase 6:** complete (11d8c3a, tag phase-6-complete) — 172 tests passed, 0 skipped; 113 eval cases
+**Phase 6:** complete (`11d8c3a`, tag `phase-6-complete`) — 172 tests passed, 0 skipped; 113 eval cases
+**Phase 7:** complete (tag `phase-7-complete`) — 197 tests passed, 0 failed; all gates green
+**v1.0.0:** released (tag `v1.0.0`)
 
 ---
 
@@ -76,6 +77,35 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` 
 - [x] Tests: dataset validation, deterministic run, metrics, security, redaction, regression
 - [x] Config + .env.example: OTEL_*, METRICS_*, EVAL_*, ALERT_* settings
 - [x] Docs: BUILD_LOG, TASKS, README, EVALUATIONS.md
+
+---
+
+## Phase 7 — Production auth, security, deployment
+
+- [x] Argon2id password hashing + server-side pepper
+- [x] JWT access tokens (Bearer, frontend memory) + refresh-token family with rotation + reuse detection
+- [x] Registration / login / logout / logout-all / password change
+- [x] Refresh in HttpOnly cookie; Secure in production; SameSite documented
+- [x] Session listing + revocation
+- [x] Brute-force protection + login lockout
+- [x] Roles: customer, support_agent, administrator (service-layer enforcement)
+- [x] Auth audit events (safe, no PII beyond user ID)
+- [x] CSRF for cookie-authenticated routes (Origin validation)
+- [x] Strict CORS, trusted-host middleware
+- [x] Security headers (CSP, X-Frame, MIME sniff, referrer, HSTS)
+- [x] Config validation: reject placeholder secrets, insecure cookies, debug in production
+- [x] Request-size limits
+- [x] Migration 0007: users auth columns + refresh_sessions + auth_audit_events
+- [x] Production containers: multi-stage, non-root, minimal runtime, health checks
+- [x] docker-compose.prod.yml with backend/frontend/worker/postgres/redis/caddy
+- [x] Caddy reverse proxy config (HTTPS, headers, upload limits)
+- [x] GitHub Actions CI (backend lint/mypy/pytest + frontend lint/build + security scan + Docker integration)
+- [x] Backup script (pg_dump)
+- [x] Restore script (pg_restore + verification)
+- [x] Retention cleanup (sessions, audio, confirmations)
+- [x] Frontend: login page, account page, session management
+- [x] Phase 7 security tests
+- [x] Documentation: SECURITY, ARCHITECTURE, API, DEPLOYMENT, BACKUP_RESTORE, DEMO, CONTRIBUTING, LICENSE, CHANGELOG
 
 ---
 

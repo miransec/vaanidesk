@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_demo_user
+from app.api.deps import get_current_user
 from app.database.session import get_db
 from app.models import User
 from app.observability.metrics import collector
@@ -34,7 +34,7 @@ router = APIRouter(tags=["evaluations"])
 @router.get("/evaluations/datasets", response_model=list[EvaluationDatasetOut])
 async def list_datasets(
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> list[EvaluationDatasetOut]:
     datasets = await eval_service.list_datasets(db)
     return [EvaluationDatasetOut.model_validate(d) for d in datasets]
@@ -44,7 +44,7 @@ async def list_datasets(
 async def list_dataset_cases(
     dataset_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> list[EvaluationCaseOut]:
     cases = await eval_service.get_dataset_cases(db, dataset_id)
     return [EvaluationCaseOut.model_validate(c) for c in cases]
@@ -53,7 +53,7 @@ async def list_dataset_cases(
 @router.post("/evaluations/datasets/seed", response_model=EvaluationDatasetOut)
 async def seed_dataset(
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> EvaluationDatasetOut:
     ds = await eval_service.seed_evaluation_dataset(db)
     return EvaluationDatasetOut.model_validate(ds)
@@ -66,7 +66,7 @@ async def seed_dataset(
 async def start_run(
     req: EvaluationRunRequest,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> EvaluationRunOut:
     run = await eval_service.start_evaluation_run(
         db,
@@ -86,7 +86,7 @@ async def list_runs(
     dataset_id: UUID | None = None,
     limit: int = Query(default=50, le=200),
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> list[EvaluationRunOut]:
     runs = await eval_service.list_runs(db, dataset_id=dataset_id, limit=limit)
     return [EvaluationRunOut.model_validate(r) for r in runs]
@@ -96,7 +96,7 @@ async def list_runs(
 async def get_run(
     run_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> EvaluationRunOut:
     run = await eval_service.get_run(db, run_id)
     if run is None:
@@ -110,7 +110,7 @@ async def get_run(
 async def get_run_results(
     run_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> list[EvaluationResultOut]:
     results = await eval_service.get_run_results(db, run_id)
     return [EvaluationResultOut.model_validate(r) for r in results]
@@ -120,7 +120,7 @@ async def get_run_results(
 async def get_run_failures(
     run_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> list[EvaluationResultOut]:
     results = await eval_service.get_run_failed_results(db, run_id)
     return [EvaluationResultOut.model_validate(r) for r in results]
@@ -131,7 +131,7 @@ async def export_run(
     run_id: UUID,
     fmt: str = Query(default="json", regex="^(json|markdown)$"),
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> PlainTextResponse:
     content = await eval_service.export_run(db, run_id, fmt=fmt)
     media = "application/json" if fmt == "json" else "text/markdown"
@@ -142,7 +142,7 @@ async def export_run(
 async def compare_run(
     run_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> dict[str, object]:
     return await eval_service.compare_runs(db, run_id)
 
@@ -153,7 +153,7 @@ async def compare_run(
 @router.get("/alerts/rules", response_model=list[AlertRuleOut])
 async def list_alert_rules(
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> list[AlertRuleOut]:
     rules = await eval_service.list_alert_rules(db)
     return [AlertRuleOut.model_validate(r) for r in rules]
@@ -163,7 +163,7 @@ async def list_alert_rules(
 async def create_alert_rule(
     req: AlertRuleCreate,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> AlertRuleOut:
     rule = await eval_service.create_alert_rule(
         db,
@@ -180,7 +180,7 @@ async def create_alert_rule(
 @router.post("/alerts/rules/seed")
 async def seed_alert_rules(
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> dict[str, int]:
     rules = await eval_service.seed_default_alert_rules(db)
     return {"seeded": len(rules)}
@@ -191,7 +191,7 @@ async def list_alert_events(
     limit: int = Query(default=100, le=500),
     status: str | None = None,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> list[AlertEventOut]:
     events = await eval_service.list_alert_events(db, limit=limit, status=status)
     return [AlertEventOut.model_validate(e) for e in events]
@@ -201,7 +201,7 @@ async def list_alert_events(
 async def acknowledge_alert(
     event_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> AlertEventOut:
     event = await eval_service.acknowledge_alert(db, event_id)
     if event is None:
@@ -215,7 +215,7 @@ async def acknowledge_alert(
 async def resolve_alert(
     event_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> AlertEventOut:
     event = await eval_service.resolve_alert(db, event_id)
     if event is None:
@@ -234,7 +234,7 @@ async def list_audit_log(
     action: str | None = None,
     resource_type: str | None = None,
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> list[AuditLogEntryOut]:
     entries = await eval_service.list_audit_log(
         db, limit=limit, action=action, resource_type=resource_type
@@ -248,7 +248,7 @@ async def list_audit_log(
 @router.get("/observability/snapshot")
 async def ops_snapshot(
     db: AsyncSession = Depends(get_db),
-    _user: User = Depends(get_demo_user),
+    _user: User = Depends(get_current_user),
 ) -> dict[str, object]:
     return await eval_service.get_ops_snapshot(db)
 

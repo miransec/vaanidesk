@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, File, Form, Header, Query, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_demo_user, get_request_id
+from app.api.deps import get_current_user, get_request_id
 from app.database.session import get_db
 from app.models import User
 from app.schemas.voice import (
@@ -33,7 +33,7 @@ async def upload_voice(
     conversation_id: UUID | None = Form(default=None),
     requested_language: str | None = Form(default=None),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
 ) -> VoiceUploadResponse:
     data = await file.read()
@@ -57,7 +57,7 @@ async def transcribe_voice(
     fixture_key: str | None = Query(default=None),
     auto_submit: bool = Query(default=True),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
 ) -> VoiceStatusResponse | VoiceSubmitResponse:
     return await voice_service.transcribe_voice(
@@ -75,7 +75,7 @@ async def transcribe_voice(
 async def get_voice_status(
     voice_message_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
 ) -> VoiceStatusResponse:
     return await voice_service.get_voice_status(
@@ -91,7 +91,7 @@ async def confirm_transcript(
     voice_message_id: UUID,
     payload: TranscriptConfirmRequest,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
 ) -> VoiceStatusResponse:
     return await voice_service.confirm_transcript(
@@ -108,7 +108,7 @@ async def edit_transcript(
     voice_message_id: UUID,
     payload: TranscriptEditRequest,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
 ) -> VoiceStatusResponse:
     return await voice_service.edit_transcript(
@@ -125,7 +125,7 @@ async def submit_transcript(
     voice_message_id: UUID,
     transcript_hash: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> VoiceSubmitResponse:
@@ -145,7 +145,7 @@ async def request_tts(
     payload: TTSRequest,
     mock_mode: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
 ) -> SpeechSynthesisOut:
     return await voice_service.synthesize_speech(
@@ -163,7 +163,7 @@ async def request_tts(
 async def download_voice_recording(
     voice_message_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
 ) -> Response:
     data, mime = await voice_service.read_authorized_audio(
@@ -179,7 +179,7 @@ async def download_voice_recording(
 async def download_synthesized_audio(
     synthesis_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
 ) -> Response:
     data, mime = await voice_service.read_authorized_audio(
@@ -195,7 +195,7 @@ async def download_synthesized_audio(
 async def delete_voice_message(
     voice_message_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
 ) -> VoiceDeleteResponse:
     return await voice_service.delete_voice_message(
@@ -209,7 +209,7 @@ async def delete_voice_message(
 @router.post("/cleanup", response_model=VoiceCleanupResponse)
 async def cleanup_expired_audio(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
 ) -> VoiceCleanupResponse:
     return await voice_service.cleanup_expired_audio(

@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_demo_user
+from app.api.deps import get_current_user
 from app.database.session import get_db
 from app.models import User
 from app.schemas.channels import (
@@ -44,7 +44,7 @@ router = APIRouter(prefix="/channels", tags=["channels"])
 @router.get("/connections", response_model=list[ChannelConnectionOut])
 async def list_connections(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> Any:
     conns = await svc.list_connections(db=db)
     return conns
@@ -55,7 +55,7 @@ async def toggle_connection(
     connection_id: UUID,
     body: ChannelConnectionToggle,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> Any:
     conn = await svc.toggle_connection(db=db, connection_id=connection_id, enabled=body.enabled)
     await db.commit()
@@ -121,7 +121,7 @@ async def webhook_whatsapp_verify(
 async def simulator_email(
     body: SimulatorEmailEvent,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     event = {
         "from": body.from_email,
@@ -139,7 +139,7 @@ async def simulator_email(
 async def simulator_whatsapp(
     body: SimulatorWhatsAppEvent,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     result = await svc.process_simulator_whatsapp(
         db=db,
@@ -159,7 +159,7 @@ async def simulator_whatsapp(
 async def create_link(
     body: LinkChallengeCreate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> Any:
     from app.channels.linking import create_link_challenge
 
@@ -174,7 +174,7 @@ async def create_link(
 async def complete_link(
     body: LinkCompleteRequest,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> Any:
     from app.channels.linking import complete_link_challenge
 
@@ -187,7 +187,7 @@ async def complete_link(
 async def unlink(
     body: UnlinkRequest,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> Any:
     from app.channels.linking import unlink_identity
 
@@ -203,7 +203,7 @@ async def unlink(
 async def get_confirmation(
     token: str = Query(...),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> ExternalConfirmationOut:
     ecr = await svc.get_external_confirmation(db=db, token=token, user_id=user.id)
     return ExternalConfirmationOut.model_validate(ecr)
@@ -214,7 +214,7 @@ async def confirm_action(
     token: str = Query(...),
     body: ExternalConfirmRequest = ExternalConfirmRequest(),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> dict[str, str]:
     result = await svc.confirm_external_action(
         db=db, token=token, user_id=user.id, approved=body.approved
@@ -229,7 +229,7 @@ async def confirm_action(
 @router.get("/outbound/failed", response_model=list[OutboundMessageOut])
 async def list_failed_outbound(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> Any:
     return await svc.list_failed_outbound(db=db)
 
@@ -238,7 +238,7 @@ async def list_failed_outbound(
 async def retry_outbound(
     message_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> dict[str, str]:
     result = await svc.retry_outbound_message(db=db, message_id=message_id)
     await db.commit()
@@ -252,7 +252,7 @@ async def retry_outbound(
 async def list_handoff(
     status: str | None = None,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> Any:
     from app.models.channels import HandoffStatus as HS
 
@@ -274,7 +274,7 @@ async def assign_handoff_endpoint(
     handoff_id: UUID,
     body: HandoffAssignRequest,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> Any:
     from app.channels.handoff import assign_handoff
 
@@ -289,7 +289,7 @@ async def assign_handoff_endpoint(
 @router.get("/events", response_model=list[InboundEventOut])
 async def list_events(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> Any:
     return await svc.list_inbound_events(db=db)
 
@@ -301,7 +301,7 @@ async def list_events(
 async def get_attachment(
     attachment_id: UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> Any:
     return await svc.get_attachment(db=db, attachment_id=attachment_id, user_id=user.id)
 
@@ -312,7 +312,7 @@ async def get_attachment(
 @router.post("/seed")
 async def seed_connections(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_demo_user),
+    user: User = Depends(get_current_user),
 ) -> dict[str, int]:
     conns = await svc.seed_default_connections(db=db)
     await db.commit()

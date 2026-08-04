@@ -67,7 +67,7 @@ async def test_chat_validation_requires_auth(app) -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         res = await client.post("/api/v1/chat/messages", json={"content": "hello"})
     assert res.status_code == 401
-    assert res.json()["error"]["code"] == "demo_auth_required"
+    assert res.json()["error"]["code"] in ("demo_auth_required", "authentication_required")
 
 
 def test_chat_empty_content_rejected() -> None:
