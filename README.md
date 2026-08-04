@@ -2,10 +2,10 @@
 
 **Multilingual AI support across chat, voice and images**
 
-[![CI](https://github.com/OWNER/vaanidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/vaanidesk/actions/workflows/ci.yml)
+[![CI](https://github.com/Mod-With-Miran/vaanidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/Mod-With-Miran/vaanidesk/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-> Replace `OWNER` in the CI badge URL with your GitHub username or organization after publishing.
+**Repository:** [github.com/Mod-With-Miran/vaanidesk](https://github.com/Mod-With-Miran/vaanidesk)
 
 VaaniDesk is a **production-oriented multilingual AI customer-support platform** for a fictional e-commerce brand. It is a portfolio engineering project that demonstrates how to ship controlled agents, hybrid retrieval, secure business actions, evaluations, and observability — with **deterministic mock providers** so the full stack runs without paid APIs.
 

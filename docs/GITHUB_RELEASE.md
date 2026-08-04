@@ -1,12 +1,16 @@
 # GitHub public release metadata (VaaniDesk v1.0.0)
 
-Use these values when creating or updating the public portfolio repository. They describe the **implemented** v1.0.0 surface.
+Source of truth for publishing under **Mod-With-Miran**.
 
-## Repository name
+## Repository
 
-```text
-vaanidesk
-```
+| Field | Value |
+|-------|--------|
+| Owner | `Mod-With-Miran` |
+| Name | `vaanidesk` |
+| URL | https://github.com/Mod-With-Miran/vaanidesk |
+| Visibility | **public** |
+| Default branch | `main` |
 
 ## Description (About panel)
 
@@ -29,14 +33,7 @@ ai-evaluation
 docker
 ```
 
-Optional extras if GitHub allows more without clutter: `playwright`, `typescript`, `redis`.
-
 Do **not** add a topic claiming a live MCP server until `mcp_server/` ships.
-
-## Visibility
-
-- Prefer **private** until you complete a final human review of screenshots and About text.
-- When ready: set **public**, attach annotated tag `v1.0.0`, and paste release notes from [`CHANGELOG.md`](../CHANGELOG.md) / [`docs/RELEASE_NOTES_v1.0.0.md`](./RELEASE_NOTES_v1.0.0.md).
 
 ## Homepage URL
 
@@ -44,10 +41,8 @@ Leave empty until a public demo is hosted. Local Compose URLs are for developers
 
 ## README CI badge
 
-After the repo exists under your account, replace `OWNER` in `README.md`:
-
 ```markdown
-[![CI](https://github.com/OWNER/vaanidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/vaanidesk/actions/workflows/ci.yml)
+[![CI](https://github.com/Mod-With-Miran/vaanidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/Mod-With-Miran/vaanidesk/actions/workflows/ci.yml)
 ```
 
 ## Release title
@@ -55,6 +50,10 @@ After the repo exists under your account, replace `OWNER` in `README.md`:
 ```text
 VaaniDesk v1.0.0
 ```
+
+## Release notes source
+
+[`docs/RELEASE_NOTES_v1.0.0.md`](./RELEASE_NOTES_v1.0.0.md)
 
 ## Release assets
 
