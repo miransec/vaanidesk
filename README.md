@@ -15,9 +15,13 @@ It is **not** a live SaaS product and does **not** claim production LLM/STT/TTS/
 
 ## Live demo
 
-**Live demo — deployment pending**
+**Live demo:** [https://vaanidesk.muhammadmiran.com](https://vaanidesk.muhammadmiran.com)
+
+**Chat:** [https://vaanidesk.muhammadmiran.com/chat](https://vaanidesk.muhammadmiran.com/chat)
 
 Portfolio case study: [muhammadmiran.com/projects/vaanidesk](https://muhammadmiran.com/projects/vaanidesk)
+
+Public demo notes: deterministic mock LLM/STT/TTS, curated personas only, simulated support tickets (no live human agent).
 
 ---
 

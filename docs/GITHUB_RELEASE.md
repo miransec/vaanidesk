@@ -37,9 +37,11 @@ Do **not** add a topic claiming a live MCP server until `mcp_server/` ships.
 
 ## Homepage URL
 
+Live demo: https://vaanidesk.muhammadmiran.com
+
 Portfolio case study: https://muhammadmiran.com/projects/vaanidesk
 
-Leave the GitHub “Website” field empty or set to the portfolio URL until a public demo is hosted. Local Compose URLs are for developers only — never present `localhost` as a live demo.
+Local Compose URLs remain for developers only — never present `localhost` as the public demo.
 
 ## README CI badge
 
