@@ -100,7 +100,6 @@ services:
     networks: [vaanidesk_internal]
     mem_limit: 768m
     cpus: "1.0"
-    read_only: true
     tmpfs:
       - /tmp
 
@@ -125,7 +124,7 @@ services:
       [
         "sh",
         "-c",
-        "while true; do uv run python -m scripts.retention_cleanup; sleep 3600; done",
+        "while true; do .venv/bin/python -m scripts.retention_cleanup; sleep 3600; done",
       ]
     volumes:
       - vaanidesk_audio:/data/audio
@@ -138,7 +137,6 @@ services:
     networks: [vaanidesk_internal]
     mem_limit: 256m
     cpus: "0.25"
-    read_only: true
     tmpfs:
       - /tmp
 
