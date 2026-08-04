@@ -1,15 +1,15 @@
 ﻿# VaaniDesk — Task Tracker
 
-Last updated: 2026-08-04 (Phase 6 complete pending commit)
+Last updated: 2026-08-04 (Phase 6 complete; Phase 7 in progress)
 
 Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` risk
 
 **Default branch:** `main`
-**Tags:** `phase-1-complete`, `phase-2-complete`, `phase-3-complete`, `phase-4-complete`, `phase-5-complete`
+**Tags:** `phase-1-complete`, `phase-2-complete`, `phase-3-complete`, `phase-4-complete`, `phase-5-complete, phase-6-complete`
 **Phase 3:** complete
 **Phase 4:** complete (`0e05e4c`, tag `phase-4-complete`) — 86 tests passed, 0 skipped
 **Phase 5:** complete (`fc8ec61`, tag `phase-5-complete`) — 127 tests passed, 0 skipped
-**Phase 6:** complete pending commit — 172 tests passed, 0 skipped; 113 eval cases
+**Phase 6:** complete (11d8c3a, tag phase-6-complete) — 172 tests passed, 0 skipped; 113 eval cases
 
 ---
 

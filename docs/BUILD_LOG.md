@@ -200,7 +200,8 @@ Do not store secrets in this file.
 - Admin auth remains demo-key based (Phase 7 hardens auth)
 
 ### Commit / tag
-- Pending after Docker/health verification
+- Commit: 11d8c3a — feat: complete VaaniDesk phase 6 evaluations and observability
+- Tag: phase-6-complete
 
 ---
 
