@@ -35,10 +35,10 @@ from app.workflows.types import WorkflowResult
 def _provider_meta(language_hint: str | None = None) -> ProviderMetadata:
     return ProviderMetadata(
         provider="workflow-heuristic",
-        model="vaanidesk-phase3-workflow",
+        model="vaanidesk-support-workflow",
         is_mock=True,
         language_hint=language_hint,
-        disclaimer="Phase 3 controlled workflow + knowledge RAG — not a production LLM",
+        disclaimer="Deterministic demo workflow — not a production LLM",
         extra={},
     )
 
@@ -69,10 +69,13 @@ def _workflow_out(result: WorkflowResult) -> WorkflowOut:
         citations=[CitationOut.model_validate(c) for c in result.citations],
         retrieval_strategy=result.retrieval_strategy,
         retrieval_confidence=result.retrieval_confidence,
+        evidence_confidence_band=result.evidence_confidence_band,
+        evidence_confidence_features=result.evidence_confidence_features,
         no_answer=result.no_answer,
         no_answer_reason=result.no_answer_reason,
         retrieval_trace_id=result.retrieval_trace_id,
         suspicious_evidence=result.suspicious_evidence,
+        tool_result=result.tool_result,
     )
 
 

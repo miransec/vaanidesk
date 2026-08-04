@@ -40,6 +40,8 @@ class WorkflowResult:
     citations: list[dict[str, Any]] = field(default_factory=list)
     retrieval_strategy: str | None = None
     retrieval_confidence: float | None = None
+    evidence_confidence_band: str | None = None
+    evidence_confidence_features: dict[str, Any] = field(default_factory=dict)
     no_answer: bool = False
     no_answer_reason: str | None = None
     retrieval_trace_id: UUID | None = None

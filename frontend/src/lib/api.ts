@@ -58,10 +58,13 @@ export type WorkflowOut = {
   citations?: CitationOut[];
   retrieval_strategy?: string | null;
   retrieval_confidence?: number | null;
+  evidence_confidence_band?: string | null;
+  evidence_confidence_features?: Record<string, unknown>;
   no_answer?: boolean;
   no_answer_reason?: string | null;
   retrieval_trace_id?: string | null;
   suspicious_evidence?: boolean;
+  tool_result?: Record<string, unknown> | null;
 };
 
 export type ChatMessageResponse = {

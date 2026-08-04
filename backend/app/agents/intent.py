@@ -98,7 +98,15 @@ class HeuristicIntentClassifier:
         lower = raw.lower()
         entities = _extract_entities(raw)
 
-        # Human escalation
+        # Agent-coaching / playbook questions are knowledge lookups, not customer escalation.
+        if re.search(
+            r"(what\s+should\s+an?\s+agent|how\s+should\s+(an?\s+)?agent|de-?escalat|"
+            r"agent\s+playbook|script\s+for\s+(an?\s+)?agent|when\s+a\s+customer\s+is\s+angry)",
+            lower,
+        ):
+            return IntentResult(Intent.POLICY_QUESTION, 0.88, entities)
+
+        # Human escalation (customer asking to reach a person)
         if re.search(
             r"\b(human|agent|representative|support\s+agent|talk\s+to\s+(a\s+)?person)\b",
             lower,

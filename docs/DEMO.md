@@ -27,12 +27,15 @@ echo "Metrics: http://localhost:8000/metrics"
 
 ## Demo Credentials
 
-| User | Demo Key | Role | Email |
-|------|----------|------|-------|
-| Anya | `demo-anya` | customer | anya@demo.vaanidesk.test |
-| Ravi | `demo-ravi` | customer | ravi@demo.vaanidesk.test |
-| Priya | `demo-priya` | support_agent | priya@demo.vaanidesk.test |
-| Admin | `demo-admin` | administrator | admin@demo.vaanidesk.test |
+Product chat shows curated personas only (no internal keys in the customer UI):
+
+| Customer | Email | Internal demo key | Known orders |
+|----------|-------|-------------------|--------------|
+| Aarav Sharma | aarav.demo@example.com | `demo-anya` (historical key; kept for v1.0.0 compatibility) | `VD-10021` shipped, `VD-10022` pending/cancellable, `VD-10023` delivered |
+| Rahul Verma | rahul.demo@example.com | `demo-rahul` | `VD-10031` confirmed, `VD-10032` shipped (cross-user AuthZ target) |
+| Meera Patel | meera.demo@example.com | `demo-meera` | `VD-10041` delivered (refund-friendly), `VD-10042` pending |
+
+Additional seeded keys (`demo-priya`, `demo-arjun`) exist for automated tests and are **not** returned by `GET /api/v1/demo-users`.
 
 Demo users have password `DemoP@ss123!` when using production auth (registration also available).
 

@@ -56,7 +56,12 @@ export default function ObservabilityPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="font-display text-2xl text-slate-900 mb-6">Observability</h1>
+      <h1 className="font-display text-2xl text-slate-900 mb-2">Observability</h1>
+      <p className="mb-6 max-w-2xl text-sm text-slate-600">
+        Engineering evidence for conversations, intents, tools, retrieval, and escalations.
+        Intent confidence and evidence confidence are tracked separately — high intent score does
+        not prove retrieved policy evidence is correct.
+      </p>
 
       {snapshot && (
         <>

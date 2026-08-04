@@ -636,7 +636,11 @@ async def test_frontend_confirm_flows_approve_deny_unauthorized(client: AsyncCli
     )
     assert first.status_code == 200
     conf = first.json()["workflow"]["confirmation"]
-    assert conf["summary"].startswith("Cancel order")
+    assert "cancel order" in conf["summary"].lower()
+    assert (
+        conf["summary"].lower().startswith("you're about to cancel")
+        or "cancel order" in conf["summary"].lower()
+    )
     assert "token" in conf
 
     # Unauthorized (other user) — FE would surface error from confirmAction

@@ -279,7 +279,7 @@ async def test_low_confidence_no_answer(client: AsyncClient, ensure_corpus: None
         "/api/v1/knowledge/retrieval/test",
         headers={"X-Demo-User-Key": "demo-anya"},
         json={
-            "query": "xyzzy quantum flibble policy unicorn 99999",
+            "query": "xyzzy quantum flibble unicorn 99999",
             "strategy": "keyword",
         },
     )

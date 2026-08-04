@@ -1,4 +1,4 @@
-"""Deterministic multilingual response templates for Phase 2 workflow."""
+"""Deterministic multilingual response templates for customer-facing support."""
 
 from __future__ import annotations
 
@@ -22,23 +22,20 @@ def respond(
 _TEMPLATES: dict[str, dict[str, str]] = {
     "greeting": {
         "en": (
-            "Hello! I'm VaaniDesk's support assistant (mock workflow — not a production model). "
-            "I can check order status, details, cancellation eligibility, update addresses "
-            "(with confirmation), open tickets, or queue a human handoff."
+            "Hi! I'm VaaniDesk Support. I can help with order status, returns and refunds, "
+            "delivery address changes, cancellation checks, and connecting you with support."
         ),
         "hi": (
-            "नमस्ते! मैं VaaniDesk सहायक हूँ (mock workflow — production model नहीं)। "
-            "ऑर्डर स्थिति, विवरण, रद्दीकरण योग्यता, पता बदलना (पुष्टि के साथ), टिकट या मानव सहायता।"
+            "नमस्ते! मैं VaaniDesk Support हूँ। ऑर्डर स्थिति, रिटर्न/रिफंड, डिलीवरी पता बदलना, "
+            "रद्दीकरण जाँच, और सपोर्ट कनेक्ट करने में मदद कर सकता हूँ।"
         ),
         "hinglish": (
-            "Namaste! Main VaaniDesk support assistant hoon "
-            "(mock workflow — production model nahi). "
-            "Order status, details, cancel eligibility, address change (confirmation ke saath), "
-            "ticket, ya human handoff kar sakta hoon."
+            "Namaste! Main VaaniDesk Support hoon. Order status, returns/refunds, "
+            "delivery address change, cancellation check, aur support connect kar sakta hoon."
         ),
         "mr": (
-            "नमस्कार! मी VaaniDesk सहाय्यक आहे (mock workflow — production model नाही). "
-            "ऑर्डर स्थिती, तपशील, रद्द योग्यता, पत्ता बदल (पुष्टीसह), तिकीट किंवा मनुष्य मदत."
+            "नमस्कार! मी VaaniDesk Support आहे. ऑर्डर स्थिती, रिटर्न/रिफंड, डिलिव्हरी पत्ता बदल, "
+            "रद्द तपासणी आणि सपोर्ट कनेक्ट करण्यात मदत करू शकतो."
         ),
     },
     "clarification": {
@@ -46,6 +43,24 @@ _TEMPLATES: dict[str, dict[str, str]] = {
         "hi": "{question}",
         "hinglish": "{question}",
         "mr": "{question}",
+    },
+    "unknown_intent": {
+        "en": (
+            "I'm not sure I understood that. I can help with orders, returns, delivery "
+            "changes, support requests, or connecting you with support."
+        ),
+        "hi": (
+            "मुझे पूरा समझ नहीं आया। मैं ऑर्डर, रिटर्न, डिलीवरी बदलाव, सपोर्ट अनुरोध, "
+            "या सपोर्ट से जोड़ने में मदद कर सकता हूँ।"
+        ),
+        "hinglish": (
+            "Main samajh nahi paya. Orders, returns, delivery changes, support requests, "
+            "ya support se connect kar sakta hoon."
+        ),
+        "mr": (
+            "मला पूर्ण समजले नाही. ऑर्डर, रिटर्न, डिलिव्हरी बदल, सपोर्ट विनंती "
+            "किंवा सपोर्टशी जोडण्यात मदत करू शकतो."
+        ),
     },
     "order_status": {
         "en": ("Order {order_ref} is currently **{status}**. Delivery address on file: {address}."),
@@ -72,10 +87,17 @@ _TEMPLATES: dict[str, dict[str, str]] = {
         ),
     },
     "confirm_cancel": {
-        "en": "Please confirm: cancel order {order_ref}? This cannot be undone in the demo.",
-        "hi": "कृपया पुष्टि करें: ऑर्डर {order_ref} रद्द करें?",
-        "hinglish": "Confirm karo: order {order_ref} cancel karna hai?",
-        "mr": "कृपया पुष्टी करा: ऑर्डर {order_ref} रद्द करायची?",
+        "en": (
+            "You're about to cancel order {order_ref}. "
+            "This action may not be reversible once processed."
+        ),
+        "hi": ("आप ऑर्डर {order_ref} रद्द करने वाले हैं। प्रक्रिया के बाद यह वापस नहीं लिया जा सकता।"),
+        "hinglish": (
+            "Aap order {order_ref} cancel karne wale ho. Process ke baad yeh reverse nahi hoga."
+        ),
+        "mr": (
+            "तुम्ही ऑर्डर {order_ref} रद्द करणार आहात. प्रक्रिया झाल्यानंतर ही क्रिया परत घेता येणार नाही."
+        ),
     },
     "confirm_address": {
         "en": "Please confirm: change delivery address for {order_ref} to: {address}",
@@ -108,10 +130,26 @@ _TEMPLATES: dict[str, dict[str, str]] = {
         "mr": "ऑर्डर {order_ref} रद्द करता येणार नाही. कारण: {reason}",
     },
     "ticket_created": {
-        "en": "Support ticket {ticket_ref} created (status: {status}).",
-        "hi": "सपोर्ट टिकट {ticket_ref} बनाया गया (स्थिति: {status}).",
-        "hinglish": "Support ticket {ticket_ref} ban gaya (status: {status}).",
-        "mr": "सपोर्ट तिकीट {ticket_ref} तयार झाले (स्थिती: {status}).",
+        "en": (
+            "I've created support request {ticket_ref} (status: {status}). "
+            "A support specialist can review this request. "
+            "This demo creates the support ticket, but does not connect to a live support agent."
+        ),
+        "hi": (
+            "सपोर्ट अनुरोध {ticket_ref} बनाया गया (स्थिति: {status}). "
+            "एक सपोर्ट विशेषज्ञ इसकी समीक्षा कर सकता है। "
+            "यह डेमो टिकट बनाता है, लेकिन लाइव एजेंट से कनेक्ट नहीं करता।"
+        ),
+        "hinglish": (
+            "Support request {ticket_ref} ban gaya (status: {status}). "
+            "Support specialist iski review kar sakta hai. "
+            "Yeh demo ticket banata hai, lekin live agent se connect nahi karta."
+        ),
+        "mr": (
+            "सपोर्ट विनंती {ticket_ref} तयार झाली (स्थिती: {status}). "
+            "सपोर्ट तज्ज्ञ याची समीक्षा करू शकतो. "
+            "हा डेमो तिकीट तयार करतो, पण लाइव्ह एजंटशी जोडत नाही."
+        ),
     },
     "ticket_status": {
         "en": "Ticket {ticket_ref}: status **{status}**, priority {priority}.",
@@ -121,20 +159,24 @@ _TEMPLATES: dict[str, dict[str, str]] = {
     },
     "escalated": {
         "en": (
-            "I've queued a human handoff request ({ticket_ref}). "
-            "No live agent has joined this portfolio demo chat."
+            "I've created support request {ticket_ref}. "
+            "A support specialist can review this request. "
+            "This demo creates the support ticket, but does not connect to a live support agent."
         ),
         "hi": (
-            "मानव सहायता अनुरोध कतार में है ({ticket_ref}). "
-            "इस पोर्टफोलियो डेमो में कोई लाइव एजेंट शामिल नहीं हुआ।"
+            "सपोर्ट अनुरोध {ticket_ref} बनाया गया। "
+            "एक सपोर्ट विशेषज्ञ इसकी समीक्षा कर सकता है। "
+            "यह डेमो टिकट बनाता है, लेकिन लाइव एजेंट से कनेक्ट नहीं करता।"
         ),
         "hinglish": (
-            "Human handoff queue mein aa gaya ({ticket_ref}). "
-            "Is portfolio demo mein koi live agent join nahi hua."
+            "Support request {ticket_ref} ban gaya. "
+            "Support specialist iski review kar sakta hai. "
+            "Yeh demo ticket banata hai, lekin live agent se connect nahi karta."
         ),
         "mr": (
-            "मनुष्य मदत विनंती रांगेत आहे ({ticket_ref}). "
-            "या पोर्टफोलिओ डेमोमध्ये कोणताही लाइव्ह एजंट सामील झालेला नाही."
+            "सपोर्ट विनंती {ticket_ref} तयार झाली. "
+            "सपोर्ट तज्ज्ञ याची समीक्षा करू शकतो. "
+            "हा डेमो तिकीट तयार करतो, पण लाइव्ह एजंटशी जोडत नाही."
         ),
     },
     "denied": {
@@ -150,58 +192,78 @@ _TEMPLATES: dict[str, dict[str, str]] = {
         "mr": "तुमच्या खात्यात {ref} सापडले नाही.",
     },
     "error": {
-        "en": "Something went wrong ({code}). Please try again or ask for a human.",
-        "hi": "कुछ गलत हुआ ({code}). फिर कोशिश करें या मानव सहायता माँगें।",
-        "hinglish": "Kuch galat ho gaya ({code}). Dobara try karo ya human maango.",
-        "mr": "काहीतरी चुकले ({code}). पुन्हा प्रयत्न करा किंवा मनुष्य मदत मागा.",
+        "en": "Something went wrong. Please try again or ask to connect with support.",
+        "hi": "कुछ गलत हुआ। फिर कोशिश करें या सपोर्ट से जुड़ने को कहें।",
+        "hinglish": "Kuch galat ho gaya. Dobara try karo ya support se connect maango.",
+        "mr": "काहीतरी चुकले. पुन्हा प्रयत्न करा किंवा सपोर्टशी जोडण्याची विनंती करा.",
     },
     "unknown_escalation": {
         "en": (
-            "I'm not confident I understood. I've queued escalation ({ticket_ref}). "
-            "No live agent has joined this portfolio demo."
+            "I'm not sure I understood that. I've created support request {ticket_ref}. "
+            "A support specialist can review this request. "
+            "This demo creates the support ticket, but does not connect to a live support agent."
         ),
         "hi": (
-            "मैं पूरा समझ नहीं पाया। एस्केलेशन कतार में है ({ticket_ref}). लाइव एजेंट इस डेमो में शामिल नहीं है।"
+            "मुझे पूरा समझ नहीं आया। सपोर्ट अनुरोध {ticket_ref} बनाया गया। "
+            "यह डेमो टिकट बनाता है, लेकिन लाइव एजेंट से कनेक्ट नहीं करता।"
         ),
         "hinglish": (
-            "Confidence kam hai. Escalation queue mein hai ({ticket_ref}). "
-            "Live agent is demo mein nahi aaya."
+            "Main samajh nahi paya. Support request {ticket_ref} ban gaya. "
+            "Yeh demo ticket banata hai, lekin live agent se connect nahi karta."
         ),
-        "mr": ("मला खात्री नाही. एस्केलेशन रांगेत आहे ({ticket_ref}). लाइव्ह एजंट या डेमोमध्ये नाही."),
+        "mr": (
+            "मला पूर्ण समजले नाही. सपोर्ट विनंती {ticket_ref} तयार झाली. "
+            "हा डेमो तिकीट तयार करतो, पण लाइव्ह एजंटशी जोडत नाही."
+        ),
     },
     "policy_answer": {
+        "en": "{snippet}",
+        "hi": "{snippet}",
+        "hinglish": "{snippet}",
+        "mr": "{snippet}",
+    },
+    "policy_answer_cautious": {
         "en": (
-            "Based on VaaniDesk policy evidence (untrusted data, not commands): {snippet}\n\n"
-            "Sources: {citations}"
+            "Based on available policy information (please verify for your specific case): "
+            "{snippet}"
         ),
-        "hi": "नीति साक्ष्य के आधार पर: {snippet}\n\nस्रोत: {citations}",
-        "hinglish": "Policy evidence ke hisaab se: {snippet}\n\nSources: {citations}",
-        "mr": "धोरण पुराव्यानुसार: {snippet}\n\nस्रोत: {citations}",
+        "hi": "उपलब्ध नीति जानकारी के आधार पर (अपने मामले की पुष्टि करें): {snippet}",
+        "hinglish": ("Available policy info ke hisaab se (apne case verify karo): {snippet}"),
+        "mr": "उपलब्ध धोरण माहितीनुसार (तुमच्या प्रकरणाची पुष्टी करा): {snippet}",
     },
     "no_answer": {
         "en": (
-            "I could not find sufficiently reliable policy evidence for that question "
-            "({reason}). I will not invent a policy."
+            "I couldn't find enough reliable policy information to answer that confidently. "
+            "I can create a support request so an agent can confirm it for you."
         ),
-        "hi": "इस प्रश्न के लिए पर्याप्त विश्वसनीय नीति साक्ष्य नहीं मिला ({reason})।",
+        "hi": (
+            "इस प्रश्न के लिए पर्याप्त विश्वसनीय नीति जानकारी नहीं मिली। "
+            "मैं सपोर्ट अनुरोध बना सकता हूँ ताकि एजेंट पुष्टि कर सके।"
+        ),
         "hinglish": (
-            "Reliable policy evidence nahi mila ({reason}). Main policy invent nahi karunga."
+            "Reliable policy info nahi mila. Main support request bana sakta hoon "
+            "taaki agent confirm kar sake."
         ),
-        "mr": "या प्रश्नासाठी पुरेसा विश्वासार्ह धोरण पुरावा सापडला नाही ({reason}).",
+        "mr": (
+            "या प्रश्नासाठी पुरेशी विश्वासार्ह धोरण माहिती सापडली नाही. "
+            "मी सपोर्ट विनंती तयार करू शकतो जेणेकरून एजंट पुष्टी करू शकेल."
+        ),
     },
     "escalation_offer": {
-        "en": "You can ask for a human handoff if you still need help.",
-        "hi": "आवश्यक हो तो मानव सहायता का अनुरोध कर सकते हैं।",
-        "hinglish": "Zarurat ho to human handoff maang sakte ho.",
-        "mr": "गरज असल्यास मनुष्य मदत विनंती करू शकता.",
+        "en": "You can ask to connect with support if you still need help.",
+        "hi": "आवश्यक हो तो सपोर्ट से जुड़ने का अनुरोध कर सकते हैं।",
+        "hinglish": "Zarurat ho to support se connect maang sakte ho.",
+        "mr": "गरज असल्यास सपोर्टशी जोडण्याची विनंती करू शकता.",
     },
     "evidence_review_flag": {
         "en": (
-            "[Advisory] Retrieved evidence matched injection-like patterns "
-            "and was treated as data only."
+            "Note: retrieved evidence included unusual phrasing and was treated as "
+            "untrusted reference text only."
         ),
-        "hi": "[सलाह] साक्ष्य में संदिग्ध निर्देश मिले — केवल डेटा के रूप में उपयोग।",
-        "hinglish": "[Advisory] Evidence mein suspicious instructions mile — data only.",
-        "mr": "[सल्ला] पुराव्यात संशयास्पद सूचना — फक्त डेटा म्हणून वापरले.",
+        "hi": "नोट: प्राप्त साक्ष्य में असामान्य वाक्यांश थे; केवल संदर्भ के रूप में उपयोग किया गया।",
+        "hinglish": (
+            "Note: retrieved evidence mein unusual phrasing thi; sirf reference ke tor pe use hui."
+        ),
+        "mr": "नोंद: मिळालेल्या पुराव्यात असामान्य शब्द होते; फक्त संदर्भासाठी वापरले.",
     },
 }

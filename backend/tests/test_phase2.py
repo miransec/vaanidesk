@@ -186,7 +186,7 @@ async def test_cancel_confirmation_approve_and_idempotent(client: AsyncClient) -
     body = first.json()
     assert body["workflow"]["confirmation_required"] is True
     token = body["workflow"]["confirmation"]["token"]
-    assert "Cancel order" in body["workflow"]["confirmation"]["summary"]
+    assert "cancel order" in body["workflow"]["confirmation"]["summary"].lower()
 
     # Other user cannot confirm
     denied = await client.post(

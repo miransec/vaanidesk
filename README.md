@@ -123,13 +123,14 @@ Open:
 | API docs (DEBUG) | http://localhost:8000/docs |
 | Health | http://localhost:8000/health |
 
-Try as `demo-anya` (demo header / chat selector):
+Try the demo as **Aarav Sharma** (internal key `demo-anya`, kept for compatibility):
 
-1. `mera order VD-10001 kahan hai` — Hinglish order status + tool path
-2. `what is your return policy for unused items?` — hybrid RAG + **Citations**
-3. `please cancel my order VD-10001` — confirmation UI (Approve / Deny)
-4. Voice upload on `/chat` — mock STT → transcript confirm → workflow
-5. `/admin/evaluations` — run mock suite; `/admin/observability` — metrics
+1. `where is my order VD-10021` — active/shipping order status
+2. `what is your return policy for unused items?` — hybrid RAG + **Sources**
+3. `What is the refund policy for a damaged product?` — Damaged Products policy citations
+4. `please cancel my order VD-10022` — confirmation UI (Keep order / Confirm cancellation)
+5. Voice upload on `/chat` — transcript confirm → workflow
+6. `/admin/evaluations` — run mock suite; `/admin/observability` — engineering evidence
 
 2–4 minute narrative: [`docs/DEMO_SCRIPT.md`](./docs/DEMO_SCRIPT.md) · one-command notes: [`docs/DEMO.md`](./docs/DEMO.md)
 

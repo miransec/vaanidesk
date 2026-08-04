@@ -25,8 +25,20 @@ router = APIRouter(tags=["chat"])
 
 @router.get("/demo-users", response_model=list[DemoUserOut])
 async def list_demo_users(db: AsyncSession = Depends(get_db)) -> list[DemoUserOut]:
-    """List seeded demo users for the Phase 1 UI. Not production auth."""
-    rows = (await db.execute(select(User).order_by(User.demo_key.asc()))).scalars().all()
+    """List curated product-demo personas only (never auth/test fixture users)."""
+    from app.core.demo_personas import PRODUCT_DEMO_KEYS
+
+    rows = (
+        (
+            await db.execute(
+                select(User)
+                .where(User.demo_key.in_(tuple(PRODUCT_DEMO_KEYS)))
+                .order_by(User.demo_key.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
     return [DemoUserOut.model_validate(u) for u in rows]
 
 

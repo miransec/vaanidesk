@@ -146,5 +146,8 @@ async def handle_transfer_to_human(
         "status": ticket.status.value,
         "queued": True,
         "live_agent_joined": False,
-        "message": "Human handoff queued for this portfolio demo — no live agent joined.",
+        "message": (
+            "Support request queued. This demo creates the support ticket, "
+            "but does not connect to a live support agent."
+        ),
     }

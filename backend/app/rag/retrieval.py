@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -21,6 +22,12 @@ from app.models import (
     User,
 )
 from app.rag.access import document_visible_to
+from app.rag.authority import (
+    confidence_band,
+    document_authority_multiplier,
+    evidence_concept_coverage,
+    query_concepts,
+)
 from app.rag.embeddings import get_embedding_provider
 from app.rag.injection import scan_evidence
 from app.rag.rerank import RerankCandidate, get_reranker
@@ -45,6 +52,8 @@ class RetrievalResult:
     chunks: list[KnowledgeChunk] = field(default_factory=list)
     citations: list[Citation] = field(default_factory=list)
     confidence: float = 0.0
+    confidence_band: str = "low"
+    confidence_features: dict[str, float | str | bool] = field(default_factory=dict)
     no_answer: bool = False
     no_answer_reason: str | None = None
     lexical_scores: dict[str, float] = field(default_factory=dict)
@@ -114,6 +123,19 @@ async def retrieve(
         for cid, row in vec_rows.items():
             chunk_map.setdefault(cid, row)
 
+    # Title-biased recall: ensure documents whose titles match query concepts enter
+    # the hybrid pool (e.g. Damaged Products for damaged-product refund questions).
+    if strategy in {
+        RetrievalStrategy.HYBRID,
+        RetrievalStrategy.HYBRID_RERANK,
+        RetrievalStrategy.KEYWORD,
+    }:
+        title_hits = await _title_concept_candidates(db, user, query, limit=8)
+        for cid, row in title_hits.items():
+            chunk_map.setdefault(cid, row)
+            # Seed a strong lexical prior so RRF / ranking can surface them.
+            lexical[cid] = max(lexical.get(cid, 0.0), 0.85)
+
     if strategy == RetrievalStrategy.KEYWORD:
         ranked_ids = sorted(lexical, key=lexical.get, reverse=True)  # type: ignore[arg-type]
         fused = dict(lexical)
@@ -122,6 +144,14 @@ async def retrieve(
         fused = dict(vector)
     else:
         fused = _rrf_fuse(lexical, vector)
+        # Authority-aware reweighting: customer policy docs outrank agent playbooks
+        # for customer questions (and the reverse for agent-coaching queries).
+        for cid, score in list(fused.items()):
+            if cid not in chunk_map:
+                continue
+            _chunk, doc, _ver = chunk_map[cid]
+            mult = document_authority_multiplier(title=doc.title, query=query)
+            fused[cid] = score * mult
         ranked_ids = sorted(fused, key=fused.get, reverse=True)  # type: ignore[arg-type]
 
     candidate_ids = ranked_ids[:candidate_k]
@@ -145,14 +175,22 @@ async def retrieve(
         fused = {**fused, **{k: max(fused.get(k, 0.0), v) for k, v in rerank_scores.items()}}
 
     selected_rows = [chunk_map[cid] for cid in selected_ids if cid in chunk_map]
-    confidence = _compute_confidence(
+    coverage = evidence_concept_coverage(query=query, texts=[row[0].text for row in selected_rows])
+    top_title = selected_rows[0][1].title if selected_rows else ""
+    authority = document_authority_multiplier(title=top_title, query=query) if top_title else 1.0
+    confidence, features = _compute_evidence_confidence(
         strategy=strategy,
         selected_ids=selected_ids,
         lexical=lexical,
         vector=vector,
         fused=fused,
         rerank_scores=rerank_scores,
+        concept_coverage=coverage,
+        authority_multiplier=authority,
     )
+    band = confidence_band(confidence)
+    features["confidence_band"] = band
+    features["top_document_title"] = top_title
 
     suspicious = False
     for chunk, _, _ in selected_rows:
@@ -166,11 +204,17 @@ async def retrieve(
         no_answer = True
         reason = "empty_results"
         confidence = 0.0
-    elif confidence < threshold:
+        band = "low"
+    elif confidence < threshold or coverage < 0.34:
         no_answer = True
-        reason = "below_confidence_threshold"
+        reason = (
+            "below_confidence_threshold"
+            if confidence < threshold
+            else "insufficient_concept_coverage"
+        )
         selected_rows = []
         selected_ids = []
+        band = "low"
 
     citations: list[Citation] = []
     if not no_answer:
@@ -192,6 +236,8 @@ async def retrieve(
         chunks=[r[0] for r in selected_rows],
         citations=citations,
         confidence=confidence,
+        confidence_band=band,
+        confidence_features=features,
         no_answer=no_answer,
         no_answer_reason=reason,
         lexical_scores=lexical,
@@ -240,11 +286,204 @@ async def retrieve(
 
 ChunkRow = tuple[KnowledgeChunk, KnowledgeDocument, KnowledgeDocumentVersion]
 
+_FTS_STOP = frozenset(
+    {
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "whom",
+        "whose",
+        "why",
+        "how",
+        "the",
+        "and",
+        "for",
+        "with",
+        "from",
+        "that",
+        "this",
+        "these",
+        "those",
+        "your",
+        "you",
+        "are",
+        "is",
+        "was",
+        "were",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "will",
+        "would",
+        "could",
+        "should",
+        "can",
+        "may",
+        "might",
+        "into",
+        "about",
+        "over",
+        "under",
+        "after",
+        "before",
+        "between",
+        "through",
+        "during",
+        "without",
+        "within",
+        "along",
+        "across",
+        "among",
+        "against",
+        "please",
+        "tell",
+        "give",
+        "need",
+        "want",
+        "like",
+        "just",
+        "also",
+        "than",
+        "then",
+        "them",
+        "they",
+        "their",
+        "there",
+        "here",
+        "some",
+        "any",
+        "all",
+        "each",
+        "every",
+        "both",
+        "few",
+        "more",
+        "most",
+        "other",
+        "such",
+        "only",
+        "own",
+        "same",
+        "too",
+        "very",
+        "able",
+        "get",
+        "got",
+        "does",
+        "did",
+        "doing",
+        "done",
+        "our",
+        "ours",
+        "myself",
+        "mera",
+        "meri",
+        "mere",
+        "kya",
+        "hai",
+        "hain",
+        "ke",
+        "ki",
+        "ko",
+        "se",
+        "par",
+        "mein",
+        "main",
+        "liye",
+        "milega",
+        "sakta",
+        "aaya",
+    }
+)
+
+
+def _fts_or_terms(query: str) -> str:
+    """Build an OR tsquery from content terms (plainto_tsquery ANDs every token)."""
+    raw = re.findall(r"[A-Za-z0-9\u0900-\u097F]{3,}", query.lower())
+    terms: list[str] = []
+    seen: set[str] = set()
+    for tok in raw:
+        if tok in _FTS_STOP or tok in seen:
+            continue
+        safe = re.sub(r"[^A-Za-z0-9\u0900-\u097F]", "", tok)
+        if len(safe) < 3:
+            continue
+        seen.add(tok)
+        terms.append(safe)
+        if len(terms) >= 12:
+            break
+    if not terms:
+        return "policy"
+    # Expand damage morphology so "damaged" queries hit "damage" chunks and vice versa.
+    expanded: list[str] = []
+    for t in terms:
+        expanded.append(t)
+        if t == "damaged":
+            expanded.append("damage")
+        elif t == "damage":
+            expanded.append("damaged")
+    # Preserve order / uniqueness
+    out: list[str] = []
+    seen2: set[str] = set()
+    for t in expanded:
+        if t not in seen2:
+            seen2.add(t)
+            out.append(t)
+    return " | ".join(out)
+
+
+async def _title_concept_candidates(
+    db: AsyncSession, user: User, query: str, limit: int
+) -> dict[str, ChunkRow]:
+    """Pull authorized chunks from docs whose titles match important query concepts."""
+
+    concepts = query_concepts(query)
+    if not concepts:
+        return {}
+    # Map concepts to title needles.
+    needles: list[str] = []
+    mapping = {
+        "damaged": ["damaged"],
+        "refund": ["refund"],
+        "return": ["return"],
+        "replacement": ["exchange", "replacement"],
+        "cancel": ["cancellation", "cancel"],
+        "warranty": ["warranty"],
+        "delivery": ["delivery", "shipping"],
+    }
+    for c in concepts:
+        needles.extend(mapping.get(c, [c]))
+    if not needles:
+        return {}
+
+    q = _authorized_chunk_query(user).limit(200)
+    rows = (await db.execute(q)).all()
+    scored: list[tuple[float, str, ChunkRow]] = []
+    for chunk, doc, ver in rows:
+        hay = doc.title.lower()
+        hits = sum(1 for n in needles if n in hay)
+        if hits <= 0:
+            continue
+        # Prefer chunks that also mention query concepts in body text.
+        body = (chunk.text or "").lower()
+        body_hits = sum(1 for c in concepts if c in body or c.rstrip("ed") in body)
+        score = float(hits) + 0.25 * float(body_hits)
+        scored.append((score, str(chunk.id), (chunk, doc, ver)))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    out: dict[str, ChunkRow] = {}
+    for _score, cid, row in scored[:limit]:
+        out[cid] = row
+    return out
+
 
 async def _keyword_search(
     db: AsyncSession, user: User, query: str, limit: int
 ) -> tuple[dict[str, float], dict[str, ChunkRow]]:
-    ts_query = func.plainto_tsquery("simple", query)
+    ts_query = func.to_tsquery("simple", _fts_or_terms(query))
     rank = func.ts_rank(KnowledgeChunk.search_vector, ts_query).label("rank")
     q = (
         _authorized_chunk_query(user)
@@ -309,9 +548,39 @@ def _compute_confidence(
     fused: dict[str, float],
     rerank_scores: dict[str, float],
 ) -> float:
-    """Blend absolute component scores so weak nearest-neighbors do not clear the gate."""
+    """Legacy score blend kept for unit tests; prefer _compute_evidence_confidence."""
+    score, _ = _compute_evidence_confidence(
+        strategy=strategy,
+        selected_ids=selected_ids,
+        lexical=lexical,
+        vector=vector,
+        fused=fused,
+        rerank_scores=rerank_scores,
+        concept_coverage=0.5,
+        authority_multiplier=1.0,
+    )
+    return score
+
+
+def _compute_evidence_confidence(
+    *,
+    strategy: RetrievalStrategy,
+    selected_ids: list[str],
+    lexical: dict[str, float],
+    vector: dict[str, float],
+    fused: dict[str, float],
+    rerank_scores: dict[str, float],
+    concept_coverage: float,
+    authority_multiplier: float,
+) -> tuple[float, dict[str, float | str | bool]]:
+    """Evidence confidence blends retrieval strength, concept coverage, and authority."""
+    features: dict[str, float | str | bool] = {
+        "concept_coverage": round(float(concept_coverage), 4),
+        "authority_multiplier": round(float(authority_multiplier), 4),
+    }
     if not selected_ids:
-        return 0.0
+        features["retrieval_strength"] = 0.0
+        return 0.0, features
     top = selected_ids[0]
     parts: list[float] = []
     if top in lexical:
@@ -324,9 +593,22 @@ def _compute_confidence(
     if top in rerank_scores:
         parts.append(max(0.0, min(1.0, float(rerank_scores[top]))))
     if strategy == RetrievalStrategy.KEYWORD and top in lexical:
-        return max(0.0, min(1.0, float(lexical[top]) / 0.05))
-    if strategy == RetrievalStrategy.VECTOR and top in vector:
-        return max(0.0, min(1.0, float(vector[top])))
-    if not parts:
-        return 0.0
-    return max(0.0, min(1.0, sum(parts) / len(parts)))
+        retrieval_strength = max(0.0, min(1.0, float(lexical[top]) / 0.05))
+    elif strategy == RetrievalStrategy.VECTOR and top in vector:
+        retrieval_strength = max(0.0, min(1.0, float(vector[top])))
+    elif not parts:
+        retrieval_strength = 0.0
+    else:
+        retrieval_strength = max(0.0, min(1.0, sum(parts) / len(parts)))
+
+    features["retrieval_strength"] = round(retrieval_strength, 4)
+    # Authority slightly above 1 boosts; below 1 (agent ops on customer Q) penalizes.
+    authority_factor = max(0.55, min(1.25, float(authority_multiplier)))
+    blended = (
+        0.45 * retrieval_strength
+        + 0.40 * max(0.0, min(1.0, float(concept_coverage)))
+        + 0.15 * ((authority_factor - 0.55) / (1.25 - 0.55))
+    )
+    score = max(0.0, min(1.0, blended))
+    features["blended_score"] = round(score, 4)
+    return score, features

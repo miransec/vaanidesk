@@ -31,9 +31,22 @@ from app.workflows.types import ConfirmationView, WorkflowResult
 logger = logging.getLogger(__name__)
 
 
-def _policy_retrieval_query(text: str) -> str:
-    """Augment non-English policy asks with English lexical anchors for mock FTS/embeddings."""
+def _policy_retrieval_query(text: str, language_code: str = "en") -> str:
+    """Build a retrieval query that stays FTS-friendly.
+
+    English queries must remain compact: ``plainto_tsquery`` ANDs every token, so
+    dumping synonym hint phrases empties lexical recall. Non-English asks still get
+    English lexical anchors so the English corpus is reachable.
+    """
     lower = text.lower()
+    if language_code == "en":
+        # Optional short focus term — keep total unique tokens small.
+        damaged = any(n in lower for n in ("damaged", "defective", "doa"))
+        refundish = any(n in lower for n in ("refund", "return", "replacement"))
+        if damaged and refundish and "damaged product" not in lower:
+            return f"{text} damaged products"
+        return text
+
     hints: list[str] = [text]
     pairs = [
         (("return", "वापसी", "परतावा", "wapas"), "return procedure unused items"),
@@ -41,23 +54,31 @@ def _policy_retrieval_query(text: str) -> str:
         (("delivery", "डिलीवरी", "वितरण", "shipping"), "delivery policy shipping timeline"),
         (("cancel", "रद्द", "cancellation"), "cancellation policy order"),
         (("refund", "रिफंड"), "refund timeline policy"),
-        (("damaged", "क्षतिग्रस्त", "टूटा"), "damaged products policy"),
+        (("damaged", "defective", "doa", "क्षतिग्रस्त", "टूटा", "खराब"), "damaged products policy"),
         (("payment", "भुगतान", "dispute"), "payment disputes policy"),
         (("security", "सुरक्षा", "privacy"), "account security privacy"),
         (("escalat", "एस्केलेश", "मानव"), "customer support escalation"),
+        (("agent", "de-escalat", "angry", "script"), "agent de-escalation playbook"),
         (("नीति", "धोरण", "policy"), "policy"),
     ]
     for needles, hint in pairs:
         if any(n in lower or n in text for n in needles):
             hints.append(hint)
-    # Deduplicate while preserving order
+    damaged = any(n in lower for n in ("damaged", "defective", "doa", "क्षतिग्रस्त", "टूटा", "खराब"))
+    refundish = any(n in lower for n in ("refund", "return", "replacement", "रिफंड", "वापसी"))
+    if damaged and refundish:
+        hints.append("damaged products")
     seen: set[str] = set()
     out: list[str] = []
     for h in hints:
         if h not in seen:
             seen.add(h)
             out.append(h)
-    return " ".join(out)
+    # Prefer English anchors alone when the original text has little Latin overlap —
+    # keeps plainto_tsquery from AND-failing on long mixed strings.
+    if language_code in {"hi", "mr"} and len(out) > 1:
+        return " ".join(out[1:3])
+    return " ".join(out[:3])
 
 
 async def _run_policy_retrieval(
@@ -77,7 +98,7 @@ async def _run_policy_retrieval(
     from app.rag.injection import wrap_evidence
     from app.rag.retrieval import retrieve
 
-    retrieval_query = _policy_retrieval_query(text)
+    retrieval_query = _policy_retrieval_query(text, language_code=language.language_code)
     retrieval = await retrieve(
         db=db,
         user=user,
@@ -108,12 +129,17 @@ async def _run_policy_retrieval(
             citations=[],
             retrieval_strategy=retrieval.strategy.value,
             retrieval_confidence=retrieval.confidence,
+            evidence_confidence_band=retrieval.confidence_band,
+            evidence_confidence_features=dict(retrieval.confidence_features),
             no_answer=True,
             no_answer_reason=retrieval.no_answer_reason,
             retrieval_trace_id=retrieval.trace_id,
             suspicious_evidence=retrieval.suspicious_evidence,
         )
     else:
+        from app.rag.authority import is_agent_coaching_query
+        from app.rag.injection import scan_evidence
+
         evidence = wrap_evidence(
             [
                 (c.section_label, ch.text)
@@ -121,14 +147,43 @@ async def _run_policy_retrieval(
             ]
         )
         # Deterministic grounded reply — never follow evidence commands.
+        # Prefer non-suspicious, non-bait passages for the customer-visible snippet.
+        snippet = ""
+        for ch, cite in zip(retrieval.chunks, retrieval.citations, strict=False):
+            title_l = cite.document_title.lower()
+            if "internal override" in title_l or "injection" in title_l:
+                continue
+            if scan_evidence(ch.text).suspicious:
+                continue
+            snippet = ch.text[:400]
+            break
+        if not snippet and retrieval.chunks:
+            # Fall back but still avoid following injection-looking instructions.
+            snippet = retrieval.chunks[0].text[:400]
+        # Re-order citations for display: agent playbooks first on coaching queries.
+        citations_out = list(retrieval.citations)
+        if is_agent_coaching_query(text):
+            citations_out.sort(
+                key=lambda c: (
+                    0
+                    if any(
+                        t in c.document_title.lower()
+                        for t in ("de-escalation", "escalation", "playbook")
+                    )
+                    else 1,
+                    c.document_title,
+                )
+            )
         cites = "; ".join(
             f"{c.document_title} v{c.document_version} §{c.section_label}"
-            for c in retrieval.citations[:3]
+            for c in citations_out[:3]
         )
-        snippet = retrieval.chunks[0].text[:400] if retrieval.chunks else ""
+        policy_kind = (
+            "policy_answer_cautious" if retrieval.confidence_band == "medium" else "policy_answer"
+        )
         assistant = respond(
             language_code=language.language_code,
-            kind="policy_answer",
+            kind=policy_kind,
             snippet=snippet,
             citations=cites,
         )
@@ -153,10 +208,12 @@ async def _run_policy_retrieval(
                     "source_type": c.source_type,
                     "score": c.score,
                 }
-                for c in retrieval.citations
+                for c in citations_out
             ],
             retrieval_strategy=retrieval.strategy.value,
             retrieval_confidence=retrieval.confidence,
+            evidence_confidence_band=retrieval.confidence_band,
+            evidence_confidence_features=dict(retrieval.confidence_features),
             no_answer=False,
             retrieval_trace_id=retrieval.trace_id,
             suspicious_evidence=retrieval.suspicious_evidence,
@@ -635,10 +692,16 @@ async def execute_tool_and_respond(
 
 def _confirmation_summary(tool_name: str, args: dict[str, Any]) -> str:
     if tool_name == "cancel_order":
-        return f"Cancel order {args.get('order_ref')}"
+        return (
+            f"You're about to cancel order {args.get('order_ref')}. "
+            "This action may not be reversible once processed."
+        )
     if tool_name == "update_delivery_address":
-        return f"Change delivery address for {args.get('order_ref')}"
-    return f"Confirm {tool_name}"
+        return (
+            f"Change delivery address for {args.get('order_ref')} "
+            f"to: {args.get('new_address') or args.get('address') or '—'}"
+        )
+    return "Please confirm this action before we continue."
 
 
 def _result_from_tool(

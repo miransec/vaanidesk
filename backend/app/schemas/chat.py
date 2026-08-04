@@ -74,10 +74,13 @@ class WorkflowOut(BaseModel):
     citations: list[CitationOut] = Field(default_factory=list)
     retrieval_strategy: str | None = None
     retrieval_confidence: float | None = None
+    evidence_confidence_band: str | None = None
+    evidence_confidence_features: dict[str, Any] = Field(default_factory=dict)
     no_answer: bool = False
     no_answer_reason: str | None = None
     retrieval_trace_id: UUID | None = None
     suspicious_evidence: bool = False
+    tool_result: dict[str, Any] | None = None
 
 
 class ChatMessageResponse(BaseModel):
