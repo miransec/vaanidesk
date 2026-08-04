@@ -7,12 +7,14 @@ import hmac
 import logging
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 import jwt
 from argon2 import PasswordHasher, Type
 from argon2.exceptions import HashingError, VerificationError, VerifyMismatchError
 from sqlalchemy import delete, select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -28,6 +30,12 @@ from app.schemas.auth import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _rows_affected(result: object) -> int:
+    return cast(CursorResult[Any], result).rowcount or 0
+
+
 _ph = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=4, type=Type.ID)
 
 
@@ -325,7 +333,7 @@ async def logout_all(
     )
     await _audit(db, user_id=user_id, event_type="logout_all", ip=ip, ua=ua)
     await db.commit()
-    return result.rowcount or 0
+    return _rows_affected(result)
 
 
 async def change_password(
@@ -414,7 +422,7 @@ async def revoke_session(
         )
         .values(is_revoked=True)
     )
-    if not result.rowcount:
+    if not _rows_affected(result):
         raise AppError(code="session_not_found", message="Session not found", status_code=404)
     await _audit(
         db,
@@ -431,7 +439,7 @@ async def cleanup_expired_sessions(db: AsyncSession) -> int:
     now = datetime.now(UTC)
     result = await db.execute(delete(RefreshSession).where(RefreshSession.expires_at < now))
     await db.commit()
-    return result.rowcount or 0
+    return _rows_affected(result)
 
 
 def validate_production_config() -> list[str]:

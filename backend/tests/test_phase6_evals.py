@@ -431,12 +431,12 @@ class TestSecretsRedaction:
             level=logging.INFO,
             pathname="",
             lineno=0,
-            msg="api_key=sk-1234567890abcdef1234567890abcdef user=bob",
+            msg="api_key=test-api-key-redaction-value user=bob",
             args=(),
             exc_info=None,
         )
         f.filter(record)
-        assert "sk-1234567890abcdef" not in record.msg
+        assert "test-api-key-redaction-value" not in record.msg
         assert "[REDACTED]" in record.msg
 
     def test_redaction_filter_blocks_bearer(self):

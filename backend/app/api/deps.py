@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from uuid import UUID
 
 from fastapi import Depends, Header, Request
@@ -35,7 +36,7 @@ async def _get_user_from_bearer(db: AsyncSession, authorization: str | None) -> 
     token = authorization[7:]
     payload = decode_access_token(token)
     user_id = payload.get("sub")
-    if not user_id:
+    if not isinstance(user_id, str) or not user_id:
         return None
     user = (await db.execute(select(User).where(User.id == UUID(user_id)))).scalar_one_or_none()
     if user is None:
@@ -112,7 +113,7 @@ async def get_current_user(
     )
 
 
-def require_role(*allowed: UserRole):
+def require_role(*allowed: UserRole) -> Callable[..., Awaitable[User]]:
     """Dependency factory: enforce role at the service boundary."""
 
     async def _check(user: User = Depends(get_current_user)) -> User:

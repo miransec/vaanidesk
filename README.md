@@ -30,6 +30,27 @@ VaaniDesk is a production-shaped AI customer-support platform for a fictional e-
 - Next.js `/login`, `/account`, `/chat`, `/knowledge`, `/channels`, `/admin/*` pages
 - Compose: postgres (pgvector), redis, backend, frontend, caddy (production)
 - `docker-compose.test.yml` for isolated CI test runs
+- **Playwright E2E** (release hardening): 9 browser tests covering demo auth, chat, citations, confirmation, no-answer, Hinglish, and JWT logout
+
+---
+
+## Engineering verification (v1.0.0)
+
+Verified locally on release hardening commit (mock providers unless noted):
+
+| Gate | Result |
+|------|--------|
+| Backend pytest | 197 passed, 0 skipped |
+| Deterministic evaluations | 113/113 cases (mock provider) |
+| Security-critical eval failures | 0 |
+| Ruff lint + format | pass |
+| mypy (`python -m mypy app`) | 0 errors |
+| Frontend lint + build + typecheck | pass |
+| Playwright E2E (Chromium) | 9 tests |
+| Docker dev stack | healthy (`/health`, `/ready`) |
+| Secret scan | gitleaks / hygiene check |
+
+Mock by default: LLM, STT, TTS, email inbox, WhatsApp simulator. Optional / credential-dependent: real OpenAI-compatible LLM, cloud speech, WhatsApp Cloud API, SMTP, public deployment.
 
 ---
 

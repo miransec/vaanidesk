@@ -298,7 +298,6 @@ Do not store secrets in this file.
 - `CONTRIBUTING.md`, `LICENSE`, `CHANGELOG.md`
 
 ### Known limitations
-- E2E tests (Playwright) documented as requirement but not implemented (heavyweight for CI without browser infra)
 - All providers remain deterministic mocks — production would need real LLM/STT/TTS integration
 - Rate limiting is request-size-based; per-IP sliding window requires Redis middleware (documented, not wired)
 - Encrypted credential storage uses established Argon2id + pepper; DB-level column encryption deferred
