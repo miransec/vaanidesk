@@ -666,3 +666,52 @@ export async function seedChannelConnections(demoKey: string): Promise<unknown> 
   });
   return parseJson(res);
 }
+
+// --- Phase 6 evaluations ---
+
+export type EvalDatasetOut = {
+  id: string;
+  name: string;
+  description: string;
+  version: number;
+  case_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EvalRunOut = {
+  id: string;
+  dataset_id: string;
+  run_name: string;
+  status: string;
+  provider: string;
+  seed: number | null;
+  total_cases: number;
+  passed: number;
+  failed: number;
+  errors: number;
+  skipped: number;
+  security_failures: number;
+  pass_rate: number | null;
+  avg_latency_ms: number | null;
+  regression_detected: boolean;
+  comparison_run_id: string | null;
+  summary: Record<string, unknown> | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+};
+
+export type EvalResultOut = {
+  id: string;
+  run_id: string;
+  case_id: string;
+  verdict: string;
+  latency_ms: number | null;
+  detected_intent: string | null;
+  security_violation: boolean;
+  score: number | null;
+  response_summary: string | null;
+  error_message: string | null;
+  created_at: string;
+};

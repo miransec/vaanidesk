@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
@@ -22,6 +22,9 @@ from app.core.logging import configure_logging
 from app.core.middleware import RequestIdMiddleware
 from app.core.redis import check_redis, close_redis
 from app.database.session import check_database
+from app.observability.logging_filters import install_redaction_filter
+from app.observability.metrics import collector
+from app.observability.tracing import init_tracing
 
 
 @asynccontextmanager
@@ -33,6 +36,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level, settings.log_format)
+    install_redaction_filter()
+    init_tracing(
+        service_name=settings.app_name,
+        enabled=getattr(settings, "otel_enabled", False),
+    )
 
     app = FastAPI(
         title=settings.app_name,
@@ -55,7 +63,15 @@ def create_app() -> FastAPI:
 
     @app.get("/health", response_model=HealthResponse, tags=["ops"])
     async def health() -> HealthResponse:
+        collector.inc("health_checks")
         return HealthResponse(status="ok", service="vaanidesk-backend")
+
+    @app.get("/metrics", tags=["ops"], response_class=PlainTextResponse)
+    async def metrics() -> PlainTextResponse:
+        return PlainTextResponse(
+            content=collector.prometheus_text(),
+            media_type="text/plain; version=0.0.4; charset=utf-8",
+        )
 
     @app.get("/ready", tags=["ops"], response_model=None)
     async def ready() -> ReadyResponse | JSONResponse:

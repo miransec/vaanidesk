@@ -1,14 +1,15 @@
 ﻿# VaaniDesk — Task Tracker
 
-Last updated: 2026-08-04 (Phase 5 complete pending commit)
+Last updated: 2026-08-04 (Phase 6 complete pending commit)
 
 Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` risk
 
 **Default branch:** `main`
-**Tags:** `phase-1-complete`, `phase-2-complete`, `phase-3-complete`, `phase-4-complete`
+**Tags:** `phase-1-complete`, `phase-2-complete`, `phase-3-complete`, `phase-4-complete`, `phase-5-complete`
 **Phase 3:** complete
 **Phase 4:** complete (`0e05e4c`, tag `phase-4-complete`) — 86 tests passed, 0 skipped
 **Phase 5:** complete (`fc8ec61`, tag `phase-5-complete`) — 127 tests passed, 0 skipped
+**Phase 6:** complete pending commit — 172 tests passed, 0 skipped; 113 eval cases
 
 ---
 
@@ -62,7 +63,19 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` 
 
 ## Phase 6 — Evaluations / observability
 
-- [ ] Not started
+- [x] Models + migration `0006_phase6_evals` (EvaluationDataset/Case/Run/Result, AlertRule/Event, AuditLogEntry)
+- [x] Evaluation dataset ≥100 cases (113 cases, 21 categories, 5 languages, ~30 security-critical)
+- [x] Deterministic eval runner with mock provider, JSON/MD export, comparison, regression thresholds
+- [x] CI-friendly CLI: `python -m scripts.run_evaluations`
+- [x] OpenTelemetry boundaries (console/no-op exporter by default)
+- [x] Prometheus-compatible `/metrics` endpoint, no high-cardinality labels
+- [x] Structured logging with redaction filters + tests proving secrets don't enter logs
+- [x] Admin pages: `/admin/evaluations`, `/admin/observability`, `/admin/audit` (real APIs)
+- [x] Alert rules (8 defaults): error-rate, latency, provider failure, unauthorized, confirmation replay, channel backlog, eval security regression, DB readiness
+- [x] Load test script: `python -m scripts.load_test`
+- [x] Tests: dataset validation, deterministic run, metrics, security, redaction, regression
+- [x] Config + .env.example: OTEL_*, METRICS_*, EVAL_*, ALERT_* settings
+- [x] Docs: BUILD_LOG, TASKS, README, EVALUATIONS.md
 
 ---
 

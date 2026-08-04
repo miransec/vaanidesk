@@ -80,6 +80,20 @@ class Settings(BaseSettings):
     channel_outbox_max_attempts: int = 5
     channel_hmac_secret: str = "dev-hmac-secret-not-for-production"
 
+    # Phase 6 — evaluations / observability
+    otel_enabled: bool = False
+    otel_exporter: str = "console"
+    otel_service_name: str = "vaanidesk-backend"
+    metrics_enabled: bool = True
+    eval_default_provider: str = "mock"
+    eval_default_seed: int = 42
+    eval_default_timeout: int = 60
+    eval_max_concurrency: int = 8
+    alert_error_rate_threshold: float = 0.10
+    alert_latency_p95_threshold_ms: float = 5000.0
+    alert_provider_failure_threshold: float = 0.50
+    alert_eval_window_seconds: int = 300
+
     # Phase 4 — voice / audio
     voice_enabled: bool = True
     voice_auto_submit_enabled: bool = True

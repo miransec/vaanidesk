@@ -36,6 +36,9 @@ export default function RootLayout({
               <Link href="/chat">Chat</Link>
               <Link href="/knowledge">Knowledge</Link>
               <Link href="/channels">Channels</Link>
+              <Link href="/admin/evaluations">Evaluations</Link>
+              <Link href="/admin/observability">Observability</Link>
+              <Link href="/admin/audit">Audit</Link>
             </div>
           </nav>
           {children}

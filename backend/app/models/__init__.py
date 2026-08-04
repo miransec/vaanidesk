@@ -1,4 +1,4 @@
-"""SQLAlchemy models — Phase 1 + Phase 2 + Phase 3 knowledge + Phase 4 voice + Phase 5 channels."""
+"""SQLAlchemy models — Phase 1–6: entities, knowledge, voice, channels, evaluations."""
 
 from app.models.channels import (
     AttachmentScanStatus,
@@ -41,6 +41,19 @@ from app.models.entities import (
     User,
     WorkflowStatus,
 )
+from app.models.evaluations import (
+    AlertEvent,
+    AlertEventStatus,
+    AlertRule,
+    AlertSeverity,
+    AuditLogEntry,
+    EvalCaseVerdict,
+    EvalRunStatus,
+    EvaluationCase,
+    EvaluationDataset,
+    EvaluationResult,
+    EvaluationRun,
+)
 from app.models.knowledge import (
     EMBEDDING_DIM,
     DocumentAccessLevel,
@@ -77,8 +90,19 @@ __all__ = [
     "ExternalConfirmationRequest",
     "AgentTrace",
     "Conversation",
+    "AlertEvent",
+    "AlertEventStatus",
+    "AlertRule",
+    "AlertSeverity",
+    "AuditLogEntry",
     "DocumentAccessLevel",
     "DocumentSourceType",
+    "EvalCaseVerdict",
+    "EvalRunStatus",
+    "EvaluationCase",
+    "EvaluationDataset",
+    "EvaluationResult",
+    "EvaluationRun",
     "HandoffStatus",
     "HumanHandoffQueueItem",
     "IdempotencyRecord",

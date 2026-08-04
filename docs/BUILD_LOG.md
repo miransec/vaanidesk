@@ -127,5 +127,82 @@ Do not store secrets in this file.
 
 ---
 
+## Phase 6 — Evaluations, Observability, and Operations
+
+### Start state
+| Item | Value |
+|------|-------|
+| Start commit | `fc8ec61` |
+| Tag | `phase-5-complete` |
+| Branch | `main` |
+| Alembic head | `0005_phase5` |
+
+### Implementation summary
+- Created `app/models/evaluations.py` with 7 models: EvaluationDataset, EvaluationCase, EvaluationRun, EvaluationResult, AlertRule, AlertEvent, AuditLogEntry
+- Migration `0006_phase6_evals` adds all tables with proper enums, indexes, and constraints
+- Evaluation dataset with 113 multilingual cases across 21 categories, 5 languages, ~30 security-critical cases
+- Deterministic mock evaluation runner with JSON/Markdown export, comparison/regression detection
+- CI-friendly CLI: `python -m scripts.run_evaluations`
+- OpenTelemetry boundaries (console/no-op exporter by default, configurable)
+- Prometheus-compatible `/metrics` endpoint with no high-cardinality labels
+- Structured logging with redaction filters (tested: API keys, Bearer tokens, body content blocked)
+- Trace spans with automatic secret redaction (no raw tokens/audio/bodies)
+- In-memory metrics collector: counters, latency histograms (avg/p95/p99)
+- Alert rules system: 8 default rules (error rate, latency, provider failure, unauthorized, confirmation replay, channel backlog, eval security regression, DB readiness)
+- Audit log for system events with safe metadata
+- Admin frontend pages: `/admin/evaluations`, `/admin/observability`, `/admin/audit` (real APIs, no static charts)
+- Load test script: `python -m scripts.load_test`
+- Operational snapshot API: DB aggregates + in-memory counters
+
+### Files created
+- `backend/app/models/evaluations.py`
+- `backend/alembic/versions/0006_phase6_evals.py`
+- `backend/app/evals/` (dataset, runner)
+- `backend/app/observability/` (tracing, metrics, logging_filters)
+- `backend/app/schemas/evaluations.py`
+- `backend/app/services/evaluations.py`
+- `backend/app/api/v1/evaluations.py`
+- `backend/scripts/run_evaluations.py`
+- `backend/scripts/load_test.py`
+- `backend/tests/test_phase6_evals.py`
+- `frontend/src/app/admin/evaluations/page.tsx`
+- `frontend/src/app/admin/observability/page.tsx`
+- `frontend/src/app/admin/audit/page.tsx`
+- `docs/EVALUATIONS.md`
+
+### Files modified
+- `backend/app/models/__init__.py` — Phase 6 model exports
+- `backend/app/api/v1/router.py` — evaluations router
+- `backend/alembic/env.py` — Phase 6 model imports
+- `backend/app/main.py` — metrics endpoint, redaction filter, tracing init
+- `backend/app/core/config.py` — Phase 6 config vars
+- `frontend/src/app/layout.tsx` — admin nav links
+- `frontend/src/lib/api.ts` — Phase 6 types
+- `.env.example` — OTEL_*, METRICS_*, EVAL_*, ALERT_* settings
+
+### Quality gates (Phase 6 completion)
+
+| Check | Result |
+|-------|--------|
+| `uv run pytest -rs` | **172 passed, 0 skipped** (127 prior + 45 Phase 6) |
+| `ruff check .` | Pass |
+| `ruff format --check .` | Pass |
+| `python -m mypy app` | Pass (95 source files) |
+| Eval dataset case count | 113 |
+| Security-critical cases | ~40 |
+| Languages covered | en, hi, mr, hinglish, unknown |
+| Categories covered | 21 |
+
+### Known limitations
+- All evaluations use mock provider — scores reflect deterministic behavior, not real LLM quality
+- OpenTelemetry uses console/no-op exporter by default (configure OTEL_EXPORTER_OTLP_ENDPOINT for production)
+- Alert rules store/log in dev — no PagerDuty/Slack integration claimed
+- Admin auth remains demo-key based (Phase 7 hardens auth)
+
+### Commit / tag
+- Pending after Docker/health verification
+
+---
+
 _Results appended at each phase checkpoint._
 

@@ -4,15 +4,15 @@
 
 VaaniDesk is a production-shaped AI customer-support platform for a fictional e-commerce company (portfolio project for **Puch AI**).
 
-> **Status:** Phase 5 (omnichannel) in progress. Phase 4 complete (86 tests). Tagged baselines: `phase-1-complete` through `phase-4-complete`.
+> **Status:** Phase 6 (evaluations / observability) in progress. Phase 5 complete (127 tests). Tagged baselines: `phase-1-complete` through `phase-5-complete`.
 
 **Default Git branch:** `main`
 
 ---
 
-## What works now (Phases 1–5)
+## What works now (Phases 1–6)
 
-- FastAPI `/health`, `/ready`, `/api/v1` chat + confirm + **knowledge** + **voice** + **channels** APIs
+- FastAPI `/health`, `/ready`, `/metrics`, `/api/v1` chat + confirm + **knowledge** + **voice** + **channels** + **evaluations** APIs
 - Explicit workflow: language → intent → **tools or RAG** → AuthZ → confirmation → traces
 - Tools: order status/details, address update, cancel eligibility/cancel, tickets, human queue
 - Knowledge: Markdown/text/JSON ingest, versions, deterministic mock embeddings, FTS + pgvector, hybrid RRF, optional mock rerank
@@ -22,7 +22,10 @@ VaaniDesk is a production-shaped AI customer-support platform for a fictional e-
 - **Voice** (Phase 4): upload → mock STT → transcript confirm → submit to orchestrator; mock TTS for responses
 - Voice features: `VOICE_ENABLED` toggle, local `AudioStorage`, per-user rate limiting, transcript confirmation for sensitive intents
 - **Channels** (Phase 5): omnichannel adapters (email dev inbox, WhatsApp simulator, web passthrough), HMAC-verified webhooks, inbound pipeline with dedup, identity linking, external confirmation for sensitive actions, transactional outbox, human handoff queue
-- Next.js `/chat`, `/knowledge`, `/channels` operator pages
+- **Evaluations** (Phase 6): 113-case multilingual eval dataset, deterministic runner with JSON/Markdown export, comparison/regression detection, CI-friendly CLI
+- **Observability** (Phase 6): OpenTelemetry tracing (console/no-op), Prometheus `/metrics`, structured logging with secret redaction, operational snapshots
+- **Alert rules** (Phase 6): configurable conditions (error rate, latency, provider failure, unauthorized, eval security regression), audit log
+- Next.js `/chat`, `/knowledge`, `/channels`, `/admin/evaluations`, `/admin/observability`, `/admin/audit` pages
 - Compose: postgres (pgvector), redis, backend, frontend
 - `docker-compose.test.yml` for isolated test runs
 
@@ -106,11 +109,25 @@ Try:
 
 ---
 
+## Phase 6 evaluation notes
+
+- Evaluations run against **mock provider** by default — scores reflect deterministic mock behavior, not real LLM quality
+- Dataset: 113 cases across 5 languages and 21 categories (~30 security-critical)
+- Security-critical failures cause the entire run to **fail** (ownership leak, unauthorized write, confirmation bypass, fabricated citation)
+- CLI: `cd backend && uv run python -m scripts.run_evaluations`
+- Admin UI: `/admin/evaluations` for runs, `/admin/observability` for metrics, `/admin/audit` for audit log
+- OpenTelemetry: console/no-op by default; set `OTEL_EXPORTER_OTLP_ENDPOINT` for production
+- Alert rules store/log in dev — no PagerDuty/Slack claimed
+- Load test: `cd backend && uv run python -m scripts.load_test`
+
+---
+
 ## Docs
 
 - [`PLAN.md`](./PLAN.md) · [`TASKS.md`](./TASKS.md)
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) · [`docs/API.md`](./docs/API.md)
 - [`docs/SECURITY.md`](./docs/SECURITY.md) · [`docs/ADR.md`](./docs/ADR.md)
+- [`docs/EVALUATIONS.md`](./docs/EVALUATIONS.md)
 
 ## License
 
