@@ -1,14 +1,14 @@
-# GitHub public release metadata (VaaniDesk v1.0.0)
+# GitHub public release metadata (VaaniDesk v1.0.1)
 
-Source of truth for publishing under **Mod-With-Miran**.
+Source of truth for publishing under **miransec**.
 
 ## Repository
 
 | Field | Value |
 |-------|--------|
-| Owner | `Mod-With-Miran` |
+| Owner | `miransec` |
 | Name | `vaanidesk` |
-| URL | https://github.com/Mod-With-Miran/vaanidesk |
+| URL | https://github.com/miransec/vaanidesk |
 | Visibility | **public** |
 | Default branch | `main` |
 
@@ -37,23 +37,27 @@ Do **not** add a topic claiming a live MCP server until `mcp_server/` ships.
 
 ## Homepage URL
 
-Leave empty until a public demo is hosted. Local Compose URLs are for developers only.
+Portfolio case study: https://muhammadmiran.com/projects/vaanidesk
+
+Leave the GitHub “Website” field empty or set to the portfolio URL until a public demo is hosted. Local Compose URLs are for developers only — never present `localhost` as a live demo.
 
 ## README CI badge
 
 ```markdown
-[![CI](https://github.com/Mod-With-Miran/vaanidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/Mod-With-Miran/vaanidesk/actions/workflows/ci.yml)
+[![CI](https://github.com/miransec/vaanidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/miransec/vaanidesk/actions/workflows/ci.yml)
 ```
 
-## Release title
+## Current release
 
 ```text
-VaaniDesk v1.0.0
+VaaniDesk v1.0.1
 ```
+
+Tag `v1.0.1` points at the product hardening commit. Portfolio screenshots were added on `main` after that tag as documentation assets.
 
 ## Release notes source
 
-[`docs/RELEASE_NOTES_v1.0.0.md`](./RELEASE_NOTES_v1.0.0.md)
+[`docs/RELEASE_NOTES_v1.0.0.md`](./RELEASE_NOTES_v1.0.0.md) (v1.0.0 baseline) · [`CHANGELOG.md`](../CHANGELOG.md)
 
 ## Release assets
 

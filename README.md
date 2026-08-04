@@ -1,15 +1,37 @@
-# VaaniDesk
+# VaaniDesk v1.0.1
 
 **Multilingual AI support across chat, voice and images**
 
-[![CI](https://github.com/Mod-With-Miran/vaanidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/Mod-With-Miran/vaanidesk/actions/workflows/ci.yml)
+[![CI](https://github.com/miransec/vaanidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/miransec/vaanidesk/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-**Repository:** [github.com/Mod-With-Miran/vaanidesk](https://github.com/Mod-With-Miran/vaanidesk)
+**Repository:** [github.com/miransec/vaanidesk](https://github.com/miransec/vaanidesk)
 
 VaaniDesk is a **production-oriented multilingual AI customer-support platform** for a fictional e-commerce brand. It is a portfolio engineering project that demonstrates how to ship controlled agents, hybrid retrieval, secure business actions, evaluations, and observability — with **deterministic mock providers** so the full stack runs without paid APIs.
 
-It is **not** a live SaaS deployment and does **not** claim production LLM/STT/TTS/WhatsApp/SMTP connectivity unless you configure optional credentials yourself.
+It is **not** a live SaaS product and does **not** claim production LLM/STT/TTS/WhatsApp/SMTP connectivity unless you configure optional credentials yourself.
+
+---
+
+## Live demo
+
+**Live demo — deployment pending**
+
+Portfolio case study: [muhammadmiran.com/projects/vaanidesk](https://muhammadmiran.com/projects/vaanidesk)
+
+---
+
+## Local development
+
+These URLs are for a **local** Docker or development stack only. They are **not** public demo URLs.
+
+| Surface | Local URL |
+|---------|-----------|
+| Frontend | http://localhost:3000 |
+| Chat | http://localhost:3000/chat |
+| Backend | http://localhost:8000 |
+| Development API docs | http://localhost:8000/docs |
+| Health | http://localhost:8000/health |
 
 ---
 
@@ -33,7 +55,7 @@ Customer-support AI fails in practice when language switching, tool misuse, weak
 |------|---------------------|
 | **Languages** | English, Hindi, Marathi, Hinglish detection + response routing |
 | **Controlled agents** | Intent → allow-listed tools → AuthZ → optional confirmation → traces |
-| **Hybrid RAG** | FTS + pgvector, Reciprocal Rank Fusion, citations, no-answer path |
+| **Hybrid RAG** | FTS + pgvector, Reciprocal Rank Fusion, citations, evidence confidence, no-answer path |
 | **Security** | JWT/refresh rotation, CSRF/origin checks, role enforcement, log redaction |
 | **Voice** | Upload → mock STT → transcript review → orchestrator; mock TTS playback |
 | **Channels** | Email inbox simulator, WhatsApp simulator, HMAC webhooks, identity linking |
@@ -41,7 +63,7 @@ Customer-support AI fails in practice when language switching, tool misuse, weak
 | **Observability** | Prometheus `/metrics`, OTel hooks, structured logs, admin audit UI |
 | **Delivery** | Docker Compose, Alembic migrations, GitHub Actions CI, Playwright E2E |
 
-**Image handling (honest scope):** channel attachment validation and damage-policy RAG exist. A dedicated vision / image-understanding model pipeline is **not** shipped in v1.0.0 (config stub only). The product tagline retains the multimodal direction.
+**Image handling (honest scope):** channel attachment validation and damage-policy RAG exist. A dedicated vision / image-understanding model pipeline is **not** shipped in v1.0.1 (config stub only). The product tagline retains the multimodal direction.
 
 **MCP:** environment placeholders and ADRs describe a future Puch-compatible MCP surface. There is **no** `mcp_server` package in this repository yet.
 
@@ -81,31 +103,30 @@ Deeper diagrams and layer notes: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md
 
 ---
 
-## Verified v1.0.0 quality gates
+## Verified v1.0.1 quality gates
 
 | Gate | Result |
 |------|--------|
-| Backend pytest | **197** passed, **0** failed, **0** skipped |
+| Backend pytest | **206** passed |
 | Deterministic evaluations (mock provider) | **113 / 113** passed |
 | Security-critical evaluation cases | **40** cases, **0** failures |
-| Playwright E2E (Chromium) | **9** passed, **0** skipped |
-| mypy (`python -m mypy app`) | **0** errors (100 source files) |
+| Playwright E2E (Chromium) | **14** passed |
+| mypy (`python -m mypy app`) | clean (strict) |
 | Ruff lint + format | pass |
 | Frontend lint + production build | pass |
 | Docker development stack | healthy (`/health`, `/ready`) |
-| Isolated Docker test stack | pass |
 | Secret scan (gitleaks) | pass |
 
 Precise wording: **113/113 deterministic evaluation cases passed using the mock provider** — not “100% AI accuracy.”
 
-Full release notes: [`CHANGELOG.md`](./CHANGELOG.md) · public GitHub metadata: [`docs/GITHUB_RELEASE.md`](./docs/GITHUB_RELEASE.md)
+Release notes: [`CHANGELOG.md`](./CHANGELOG.md) · GitHub metadata: [`docs/GITHUB_RELEASE.md`](./docs/GITHUB_RELEASE.md)
 
 ---
 
-## Quick demo
+## Quick start (local)
 
 ```powershell
-git clone <your-fork-url> vaanidesk
+git clone https://github.com/miransec/vaanidesk.git
 cd vaanidesk
 copy .env.example .env
 docker compose up --build -d
@@ -114,14 +135,7 @@ docker compose exec backend uv run python -m scripts.seed
 docker compose exec backend uv run python -m scripts.seed_knowledge
 ```
 
-Open:
-
-| Surface | URL |
-|---------|-----|
-| Frontend | http://localhost:3000 |
-| Chat demo | http://localhost:3000/chat |
-| API docs (DEBUG) | http://localhost:8000/docs |
-| Health | http://localhost:8000/health |
+Then open the **Local development** URLs above.
 
 Try the demo as **Aarav Sharma** (internal key `demo-anya`, kept for compatibility):
 
@@ -138,7 +152,16 @@ Try the demo as **Aarav Sharma** (internal key `demo-anya`, kept for compatibili
 
 ## Screenshots
 
-UI screenshots are not committed as fabricated assets. Capture targets and file names live in [`docs/assets/screenshots/README.md`](./docs/assets/screenshots/README.md).
+Portfolio UI captures (real application, v1.0.1):
+
+| | |
+|-|-|
+| ![Home](docs/assets/screenshots/01-home.png) | ![Hinglish order](docs/assets/screenshots/02-hinglish-order.png) |
+| ![Order status](docs/assets/screenshots/03-order-status.png) | ![RAG citations](docs/assets/screenshots/04-rag-refund-citations.png) |
+| ![Cancellation](docs/assets/screenshots/05-cancellation-confirmation.png) | ![Escalation](docs/assets/screenshots/06-support-escalation.png) |
+| ![Observability](docs/assets/screenshots/07-observability.png) | ![Evaluations](docs/assets/screenshots/08-evaluations.png) |
+
+Capture notes: [`docs/assets/screenshots/README.md`](./docs/assets/screenshots/README.md)
 
 ---
 
@@ -154,7 +177,7 @@ UI screenshots are not committed as fabricated assets. Capture targets and file 
 
 ---
 
-## Local development
+## Development tooling
 
 | Tool | Version |
 |------|---------|
