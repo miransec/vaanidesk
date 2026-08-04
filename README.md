@@ -2,59 +2,158 @@
 
 **Multilingual AI support across chat, voice and images**
 
-VaaniDesk is a production-shaped AI customer-support platform for a fictional e-commerce company (portfolio project for **Puch AI**).
+[![CI](https://github.com/OWNER/vaanidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/vaanidesk/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-> **Status:** v1.0.0 — Phase 7 (production auth, security, deployment) complete. All quality gates green. Tagged baselines: `phase-1-complete` through `phase-7-complete`, `v1.0.0`.
+> Replace `OWNER` in the CI badge URL with your GitHub username or organization after publishing.
 
-**Default Git branch:** `main`
+VaaniDesk is a **production-oriented multilingual AI customer-support platform** for a fictional e-commerce brand. It is a portfolio engineering project that demonstrates how to ship controlled agents, hybrid retrieval, secure business actions, evaluations, and observability — with **deterministic mock providers** so the full stack runs without paid APIs.
 
----
-
-## What works now (Phases 1–7)
-
-- **Authentication** (Phase 7): Argon2id password hashing + server-side pepper, JWT access tokens (Bearer), refresh token rotation with reuse detection, HttpOnly cookie refresh, login/register/logout/logout-all, password change, session listing + revocation, brute-force lockout
-- **Roles**: customer / support_agent / administrator with service-layer enforcement
-- **Security hardening**: strict CORS, trusted-host, CSP/X-Frame/MIME-sniff/referrer headers, CSRF for cookie auth, request-size limits, config validation rejecting weak secrets in production
-- **Production deployment**: multi-stage Docker, non-root containers, docker-compose.prod.yml with Caddy reverse proxy (HTTPS), read-only FS, health checks
-- **CI/CD**: GitHub Actions for backend (lint, format, mypy, pytest, audit) + frontend (lint, build, audit) + security scan + Docker integration
-- **Scripts**: backup (pg_dump), restore (pg_restore), retention cleanup (sessions, audio, confirmations)
-- FastAPI `/health`, `/ready`, `/metrics`, `/api/v1` chat + confirm + **knowledge** + **voice** + **channels** + **evaluations** + **auth** APIs
-- Explicit workflow: language → intent → **tools or RAG** → AuthZ → confirmation → traces
-- Tools: order status/details, address update, cancel eligibility/cancel, tickets, human queue
-- Knowledge: Markdown/text/JSON ingest, versions, deterministic mock embeddings, FTS + pgvector, hybrid RRF, optional mock rerank
-- Citations, configurable no-answer threshold, advisory injection scanning
-- **Voice** (Phase 4): upload → mock STT → transcript confirm → submit to orchestrator; mock TTS for responses
-- **Channels** (Phase 5): omnichannel adapters (email dev inbox, WhatsApp simulator, web passthrough), HMAC-verified webhooks, identity linking, human handoff queue
-- **Evaluations** (Phase 6): 113-case multilingual eval dataset, deterministic runner, comparison/regression detection
-- **Observability** (Phase 6): OpenTelemetry tracing, Prometheus `/metrics`, structured logging with secret redaction, alert rules
-- Next.js `/login`, `/account`, `/chat`, `/knowledge`, `/channels`, `/admin/*` pages
-- Compose: postgres (pgvector), redis, backend, frontend, caddy (production)
-- `docker-compose.test.yml` for isolated CI test runs
-- **Playwright E2E** (release hardening): 9 browser tests covering demo auth, chat, citations, confirmation, no-answer, Hinglish, and JWT logout
+It is **not** a live SaaS deployment and does **not** claim production LLM/STT/TTS/WhatsApp/SMTP connectivity unless you configure optional credentials yourself.
 
 ---
 
-## Engineering verification (v1.0.0)
+## Why this project exists
 
-Verified locally on release hardening commit (mock providers unless noted):
+Customer-support AI fails in practice when language switching, tool misuse, weak authorization, or uncited answers slip through. VaaniDesk is built to show the hard parts:
+
+- Hinglish / code-switching language detection
+- Allow-listed tool calling with ownership checks
+- Sensitive-action confirmation tokens and idempotency
+- Hybrid RAG with source citations and no-answer thresholds
+- Prompt-injection boundaries (including retrieved-document isolation)
+- Multilingual evaluation and security-critical regression gates
+- Auth, Docker, CI, and browser E2E around the same workflow
+
+---
+
+## Engineering highlights
+
+| Area | What is implemented |
+|------|---------------------|
+| **Languages** | English, Hindi, Marathi, Hinglish detection + response routing |
+| **Controlled agents** | Intent → allow-listed tools → AuthZ → optional confirmation → traces |
+| **Hybrid RAG** | FTS + pgvector, Reciprocal Rank Fusion, citations, no-answer path |
+| **Security** | JWT/refresh rotation, CSRF/origin checks, role enforcement, log redaction |
+| **Voice** | Upload → mock STT → transcript review → orchestrator; mock TTS playback |
+| **Channels** | Email inbox simulator, WhatsApp simulator, HMAC webhooks, identity linking |
+| **Evaluations** | 113 deterministic cases; security-critical failures fail the run |
+| **Observability** | Prometheus `/metrics`, OTel hooks, structured logs, admin audit UI |
+| **Delivery** | Docker Compose, Alembic migrations, GitHub Actions CI, Playwright E2E |
+
+**Image handling (honest scope):** channel attachment validation and damage-policy RAG exist. A dedicated vision / image-understanding model pipeline is **not** shipped in v1.0.0 (config stub only). The product tagline retains the multimodal direction.
+
+**MCP:** environment placeholders and ADRs describe a future Puch-compatible MCP surface. There is **no** `mcp_server` package in this repository yet.
+
+---
+
+## Architecture (high level)
+
+```mermaid
+flowchart LR
+  U[User / Channel<br/>Web · Voice · Email · WhatsApp sim]
+  FE[Next.js Frontend]
+  API[FastAPI /api/v1]
+  WF[Controlled Agent Workflow<br/>language → intent → tools/RAG → AuthZ → confirm]
+  TOOLS[Tool Registry]
+  RAG[Hybrid RAG<br/>FTS + pgvector + RRF]
+  DB[(PostgreSQL + pgvector)]
+  REDIS[(Redis<br/>confirm · replay · rate limits)]
+  PROV[Provider Abstraction<br/>mock LLM / STT / TTS]
+  OBS[Traces · Metrics · Evaluations]
+
+  U --> FE --> API
+  U --> API
+  API --> WF
+  WF --> TOOLS
+  WF --> RAG
+  TOOLS --> DB
+  RAG --> DB
+  WF --> REDIS
+  WF --> PROV
+  WF --> OBS
+  API --> OBS
+```
+
+**Security boundary:** models never call the database directly. Tools are allow-listed; ownership is enforced in the service layer; sensitive writes require confirmation tokens; Redis security paths fail closed.
+
+Deeper diagrams and layer notes: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) · threat model: [`docs/SECURITY.md`](./docs/SECURITY.md)
+
+---
+
+## Verified v1.0.0 quality gates
 
 | Gate | Result |
 |------|--------|
-| Backend pytest | 197 passed, 0 skipped |
-| Deterministic evaluations | 113/113 cases (mock provider) |
-| Security-critical eval failures | 0 |
+| Backend pytest | **197** passed, **0** failed, **0** skipped |
+| Deterministic evaluations (mock provider) | **113 / 113** passed |
+| Security-critical evaluation cases | **40** cases, **0** failures |
+| Playwright E2E (Chromium) | **9** passed, **0** skipped |
+| mypy (`python -m mypy app`) | **0** errors (100 source files) |
 | Ruff lint + format | pass |
-| mypy (`python -m mypy app`) | 0 errors |
-| Frontend lint + build + typecheck | pass |
-| Playwright E2E (Chromium) | 9 tests |
-| Docker dev stack | healthy (`/health`, `/ready`) |
-| Secret scan | gitleaks / hygiene check |
+| Frontend lint + production build | pass |
+| Docker development stack | healthy (`/health`, `/ready`) |
+| Isolated Docker test stack | pass |
+| Secret scan (gitleaks) | pass |
 
-Mock by default: LLM, STT, TTS, email inbox, WhatsApp simulator. Optional / credential-dependent: real OpenAI-compatible LLM, cloud speech, WhatsApp Cloud API, SMTP, public deployment.
+Precise wording: **113/113 deterministic evaluation cases passed using the mock provider** — not “100% AI accuracy.”
+
+Full release notes: [`CHANGELOG.md`](./CHANGELOG.md) · public GitHub metadata: [`docs/GITHUB_RELEASE.md`](./docs/GITHUB_RELEASE.md)
 
 ---
 
-## Prerequisites
+## Quick demo
+
+```powershell
+git clone <your-fork-url> vaanidesk
+cd vaanidesk
+copy .env.example .env
+docker compose up --build -d
+docker compose exec backend uv run alembic upgrade head
+docker compose exec backend uv run python -m scripts.seed
+docker compose exec backend uv run python -m scripts.seed_knowledge
+```
+
+Open:
+
+| Surface | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Chat demo | http://localhost:3000/chat |
+| API docs (DEBUG) | http://localhost:8000/docs |
+| Health | http://localhost:8000/health |
+
+Try as `demo-anya` (demo header / chat selector):
+
+1. `mera order VD-10001 kahan hai` — Hinglish order status + tool path
+2. `what is your return policy for unused items?` — hybrid RAG + **Citations**
+3. `please cancel my order VD-10001` — confirmation UI (Approve / Deny)
+4. Voice upload on `/chat` — mock STT → transcript confirm → workflow
+5. `/admin/evaluations` — run mock suite; `/admin/observability` — metrics
+
+2–4 minute narrative: [`docs/DEMO_SCRIPT.md`](./docs/DEMO_SCRIPT.md) · one-command notes: [`docs/DEMO.md`](./docs/DEMO.md)
+
+---
+
+## Screenshots
+
+UI screenshots are not committed as fabricated assets. Capture targets and file names live in [`docs/assets/screenshots/README.md`](./docs/assets/screenshots/README.md).
+
+---
+
+## Stack
+
+| Layer | Choice |
+|-------|--------|
+| Backend | Python 3.12, FastAPI, SQLAlchemy, Alembic, Redis |
+| Frontend | Next.js 15, React 19, TypeScript, Tailwind |
+| Data | PostgreSQL 16 + pgvector |
+| Quality | pytest, Ruff, mypy, Playwright, GitHub Actions |
+| Default AI | Deterministic mock LLM / STT / TTS / embeddings |
+
+---
+
+## Local development
 
 | Tool | Version |
 |------|---------|
@@ -62,7 +161,6 @@ Mock by default: LLM, STT, TTS, email inbox, WhatsApp simulator. Optional / cred
 | Python | **3.12** via `uv` |
 | Node.js | **24** LTS |
 | Docker Desktop | Compose stack |
-| uv | backend package manager |
 
 ### Backend
 
@@ -83,74 +181,55 @@ npm ci
 npm run dev
 ```
 
-### Compose
+### Quality commands
 
 ```powershell
-docker compose up --build
-# Inside the backend container (corpus mounted at /sample_data):
-docker compose exec backend uv run python -m scripts.seed
-docker compose exec backend uv run python -m scripts.seed_knowledge
+# Backend
+cd backend
+uv run pytest -rs
+uv run ruff check .
+uv run ruff format --check .
+uv run python -m mypy app
+uv run python -m scripts.run_evaluations --provider mock --seed 42
+
+# Frontend
+cd frontend
+npm run lint
+npm run build
+npm run test:e2e
 ```
 
-### Test Compose
-
-```powershell
-docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
-```
-
-`KNOWLEDGE_SEED_DIR` defaults to `/sample_data/policies` in Compose (`./sample_data` → `/sample_data:ro`). On the host, leave it unset to use `<repository-root>/sample_data/policies`. The seed script fails clearly if `manifest.json` is missing.
-
-Demo auth header: `X-Demo-User-Key: demo-anya` (not production).
-
-Try:
-
-- `where is my order VD-10001`
-- `what is your return policy`
-- `वापसी नीति क्या है?`
-- `please cancel my order VD-10001`
+Demo auth header (not production): `X-Demo-User-Key: demo-anya`.
 
 ---
 
-## Phase 4 voice notes
+## Mock vs optional integrations
 
-- Voice is a **transport** into the existing controlled orchestrator — not a separate agent
-- STT/TTS providers: `DeterministicMockSTT` / `DeterministicMockTTS` (no real speech quality claims)
-- Audio storage: local filesystem (`AUDIO_STORAGE_DIR`); no S3 required for demo
-- Toggle: `VOICE_ENABLED=true` in `.env`
-- Transcript confirmation required before submitting sensitive intents
-- Rate limits: uploads/min, bytes/hour, STT/TTS requests/min, max concurrent jobs (all configurable)
+| Mode | Included |
+|------|----------|
+| **Mock (default)** | Deterministic LLM workflow, mock STT/TTS, lexical embeddings, email inbox simulator, WhatsApp simulator |
+| **Optional / credential-dependent** | OpenAI-compatible LLM, cloud speech, WhatsApp Cloud API, SMTP, public HTTPS deployment |
 
----
-
-## Phase 3 knowledge notes
-
-- Embeddings: **Deterministic lexical embedding baseline for local development and testing — not production semantic embeddings.**
-- Hybrid fusion: Reciprocal Rank Fusion with `k=60`
-- Confidence threshold: `RAG_MIN_RETRIEVAL_CONFIDENCE` (default `0.30`)
-- Knowledge corpus: set `KNOWLEDGE_SEED_DIR` or rely on host fallback `<repo>/sample_data/policies`
-- Restricted sample doc “Internal Override Notes” is allowlisted to `demo-anya` only (injection bait; cannot trigger tools)
+Never hardcode `PUCH_APPLICATION_KEY`, resume Markdown, JWT secrets, or production DB passwords. Copy `.env.example` → `.env` locally only.
 
 ---
 
-## Phase 6 evaluation notes
+## Documentation
 
-- Evaluations run against **mock provider** by default — scores reflect deterministic mock behavior, not real LLM quality
-- Dataset: 113 cases across 5 languages and 21 categories (~30 security-critical)
-- Security-critical failures cause the entire run to **fail** (ownership leak, unauthorized write, confirmation bypass, fabricated citation)
-- CLI: `cd backend && uv run python -m scripts.run_evaluations`
-- Admin UI: `/admin/evaluations` for runs, `/admin/observability` for metrics, `/admin/audit` for audit log
-- OpenTelemetry: console/no-op by default; set `OTEL_EXPORTER_OTLP_ENDPOINT` for production
-- Alert rules store/log in dev — no PagerDuty/Slack claimed
-- Load test: `cd backend && uv run python -m scripts.load_test`
+| Doc | Purpose |
+|-----|---------|
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Layers, auth flow, Mermaid overview |
+| [`docs/API.md`](./docs/API.md) | HTTP surfaces |
+| [`docs/SECURITY.md`](./docs/SECURITY.md) | Controls and threat notes |
+| [`docs/EVALUATIONS.md`](./docs/EVALUATIONS.md) | Eval dataset and runner |
+| [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) | Production Compose / Caddy |
+| [`docs/DEMO_SCRIPT.md`](./docs/DEMO_SCRIPT.md) | Portfolio walkthrough |
+| [`docs/GITHUB_RELEASE.md`](./docs/GITHUB_RELEASE.md) | Repo description & topics |
+| [`SECURITY.md`](./SECURITY.md) | Vulnerability reporting |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Dev setup & standards |
+| [`PLAN.md`](./PLAN.md) · [`TASKS.md`](./TASKS.md) | Historical build plan (some future items remain aspirational) |
 
 ---
-
-## Docs
-
-- [`PLAN.md`](./PLAN.md) · [`TASKS.md`](./TASKS.md)
-- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) · [`docs/API.md`](./docs/API.md)
-- [`docs/SECURITY.md`](./docs/SECURITY.md) · [`docs/ADR.md`](./docs/ADR.md)
-- [`docs/EVALUATIONS.md`](./docs/EVALUATIONS.md)
 
 ## License
 

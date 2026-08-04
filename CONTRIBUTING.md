@@ -19,14 +19,17 @@
 ### Frontend (TypeScript)
 - Node 24+
 - Linter: `npm run lint`
+- Typecheck: `npm run typecheck`
 - Build check: `npm run build`
+- Browser E2E: `npx playwright install chromium` then `npm run test:e2e` (stack must be running)
 
 ## Testing
 
 - All tests must pass with `LLM_PROVIDER=mock` (no paid APIs required)
 - New features require tests
 - No required skips — all tests must pass
-- Test database is isolated (uses separate PG instance or test schema)
+- Test database is isolated (`docker-compose.test.yml` or separate PG instance)
+- Playwright covers critical chat/auth paths only — keep new E2E cases small and deterministic
 
 ## Commit Messages
 

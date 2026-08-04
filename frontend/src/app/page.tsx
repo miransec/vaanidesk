@@ -5,14 +5,15 @@ export default function HomePage() {
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 pb-16 pt-8 md:pt-16">
       <section className="max-w-2xl space-y-5">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-teal-800">
-          Multilingual AI support
+          Multilingual AI support across chat, voice and images
         </p>
         <h1 className="font-display text-4xl leading-tight text-slate-950 md:text-6xl">
           VaaniDesk
         </h1>
         <p className="text-lg text-slate-700 md:text-xl">
-          Chat, voice and images for customer support — starting with a Phase 1 multilingual mock
-          chat foundation for English, Hindi, Hinglish and Marathi.
+          Production-oriented customer support for English, Hindi, Hinglish and Marathi — with
+          controlled tools, hybrid RAG citations, sensitive-action confirmation, voice transport,
+          evaluations and security gates. Default providers are deterministic mocks.
         </p>
         <div className="flex flex-wrap gap-3">
           <Link
@@ -21,8 +22,14 @@ export default function HomePage() {
           >
             Open chat demo
           </Link>
+          <Link
+            href="/login"
+            className="rounded-md border border-slate-300 bg-white/70 px-5 py-2.5 text-sm text-slate-800"
+          >
+            Sign in
+          </Link>
           <a
-            href="http://localhost:8000/docs"
+            href={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/docs`}
             className="rounded-md border border-slate-300 bg-white/70 px-5 py-2.5 text-sm text-slate-800"
           >
             API docs
@@ -32,24 +39,24 @@ export default function HomePage() {
 
       <section className="grid gap-6 md:grid-cols-3">
         <div>
-          <h2 className="font-display text-xl text-slate-900">Mock provider</h2>
+          <h2 className="font-display text-xl text-slate-900">Mock providers</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Deterministic offline responses. Not a production model. Swap providers later via
-            environment configuration.
+            Deterministic LLM, STT and TTS for local demos and CI. Not production model quality.
+            Swap providers later via environment configuration.
           </p>
         </div>
         <div>
-          <h2 className="font-display text-xl text-slate-900">Demo auth</h2>
+          <h2 className="font-display text-xl text-slate-900">Auth options</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Use seeded users like <code>demo-anya</code>. Phase 1 demo identity headers are not
-            production authentication.
+            Register or sign in with JWT sessions, or continue with seeded demo users such as{" "}
+            <code>demo-anya</code> when demo mode is enabled.
           </p>
         </div>
         <div>
-          <h2 className="font-display text-xl text-slate-900">What&apos;s next</h2>
+          <h2 className="font-display text-xl text-slate-900">Verified v1.0.0</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Phase 2 adds controlled tools, confirmations and traces. RAG, voice, MCP and evals
-            follow in later phases.
+            197 backend tests, 113 deterministic evaluations, 9 Playwright E2E tests — plus Ruff,
+            mypy and Docker health gates.
           </p>
         </div>
       </section>

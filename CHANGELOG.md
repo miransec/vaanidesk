@@ -4,6 +4,20 @@ All notable changes to VaaniDesk are documented here.
 
 ## [1.0.0] — 2026-08-04
 
+### Release hardening & public portfolio prep
+
+- Mypy-clean auth typing (`deps.py` / `auth.py`)
+- Playwright Chromium E2E (9 tests): demo auth, chat, citations, confirmation, clarification, Hinglish, JWT logout
+- CI: E2E job + Docker test stack migrate/seed before pytest
+- Migration `0007` downgrade resilience for nullable `demo_key`
+- Gitleaks allowlist for deterministic redaction fixtures
+- Recruiter-facing README, architecture Mermaid, demo script, GitHub metadata, screenshot capture plan
+- Honest scope notes: mock providers; MCP and vision pipelines not shipped as app code
+
+### Verification (mock providers)
+
+- 197 backend tests · 113/113 evaluations · 40 security-critical · 0 security failures · 9 Playwright E2E
+
 ### Phase 7 — Production Auth, Security & Deployment
 
 #### Added

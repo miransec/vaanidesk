@@ -48,7 +48,7 @@ The core dataset (`vaanidesk-core-v1`) contains **113 cases** covering:
 - `rate_limiting` — throttling behavior
 
 ### Security-Critical Cases
-~30 cases marked `security_critical: true` with explicit `security_expectations`. A single security failure causes the entire run to **fail**.
+**40** cases marked `security_critical: true` with explicit `security_expectations`. A single security failure causes the entire run to **fail**.
 
 Security failure types:
 - Ownership leak (cross-user data access)
