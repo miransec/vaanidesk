@@ -61,13 +61,15 @@ def create_app() -> FastAPI:
 
     docs_url = "/docs" if settings.debug else None
     redoc_url = "/redoc" if settings.debug else None
+    openapi_url = "/openapi.json" if settings.debug else None
 
     app = FastAPI(
         title=settings.app_name,
-        version="1.0.0",
+        version="1.0.1",
         lifespan=lifespan,
         docs_url=docs_url,
         redoc_url=redoc_url,
+        openapi_url=openapi_url,
     )
 
     app.add_middleware(SecurityHeadersMiddleware)

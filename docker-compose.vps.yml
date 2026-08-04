@@ -1,0 +1,176 @@
+# VaaniDesk VPS demo — sits behind the existing system Caddy.
+# Does NOT publish 80/443 (portfolio Caddy owns those).
+# Does NOT publish Postgres/Redis.
+#
+# Usage on the VPS:
+#   cd /opt/vaanidesk
+#   docker compose -f docker-compose.vps.yml --env-file .env.vps up -d --build
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - vaanidesk_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [vaanidesk_internal]
+    mem_limit: 768m
+    cpus: "1.0"
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--save", "60", "1"]
+    volumes:
+      - vaanidesk_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    networks: [vaanidesk_internal]
+    mem_limit: 128m
+    cpus: "0.25"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    environment:
+      APP_ENV: production
+      DEBUG: "false"
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      PASSWORD_PEPPER: ${PASSWORD_PEPPER}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-mock}
+      STT_PROVIDER: ${STT_PROVIDER:-mock}
+      TTS_PROVIDER: ${TTS_PROVIDER:-mock}
+      VISION_PROVIDER: ${VISION_PROVIDER:-mock}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS}
+      FRONTEND_URL: ${FRONTEND_URL}
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+      # Portfolio demo: curated personas via X-Demo-User-Key (not a live SaaS).
+      DEMO_MODE: "true"
+      SECURE_COOKIES: "true"
+      COOKIE_SAMESITE: lax
+      CSRF_ENABLED: "true"
+      VOICE_ENABLED: "true"
+      CHANNELS_ENABLED: "true"
+      METRICS_ENABLED: "true"
+      AUDIO_STORAGE_DIR: /data/audio
+      KNOWLEDGE_SEED_DIR: /sample_data/policies
+    volumes:
+      - ./sample_data:/sample_data:ro
+      - vaanidesk_audio:/data/audio
+    ports:
+      - "127.0.0.1:18000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks: [vaanidesk_internal]
+    mem_limit: 768m
+    cpus: "1.0"
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    environment:
+      APP_ENV: production
+      DEBUG: "false"
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      PASSWORD_PEPPER: ${PASSWORD_PEPPER}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      AUDIO_STORAGE_DIR: /data/audio
+    command:
+      [
+        "sh",
+        "-c",
+        "while true; do uv run python -m scripts.retention_cleanup; sleep 3600; done",
+      ]
+    volumes:
+      - vaanidesk_audio:/data/audio
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [vaanidesk_internal]
+    mem_limit: 256m
+    cpus: "0.25"
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Same-origin public URL — browser must never see localhost:8000
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL}
+    ports:
+      - "127.0.0.1:13000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [vaanidesk_internal]
+    mem_limit: 512m
+    cpus: "0.75"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  vaanidesk_internal:
+    driver: bridge
+    name: vaanidesk_internal
+
+volumes:
+  vaanidesk_pgdata:
+  vaanidesk_redis:
+  vaanidesk_audio:
