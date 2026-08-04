@@ -72,6 +72,9 @@ services:
       METRICS_ENABLED: "true"
       AUDIO_STORAGE_DIR: /data/audio
       KNOWLEDGE_SEED_DIR: /sample_data/policies
+      UV_CACHE_DIR: /tmp/uv-cache
+      XDG_CACHE_HOME: /tmp/xdg-cache
+      UV_NO_CACHE: "1"
     volumes:
       - ./sample_data:/sample_data:ro
       - vaanidesk_audio:/data/audio
@@ -115,6 +118,9 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       AUDIO_STORAGE_DIR: /data/audio
+      UV_CACHE_DIR: /tmp/uv-cache
+      XDG_CACHE_HOME: /tmp/xdg-cache
+      UV_NO_CACHE: "1"
     command:
       [
         "sh",
