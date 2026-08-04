@@ -1,0 +1,5 @@
+[allowlist]
+description = "Allow deterministic fake secret used for redaction unit tests in historical commits."
+regexes = [
+  '''sk-1234567890abcdef1234567890abcdef''',
+]
