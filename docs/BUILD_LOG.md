@@ -1,4 +1,4 @@
-# VaaniDesk Build Log
+﻿# VaaniDesk Build Log
 
 Do not store secrets in this file.
 
@@ -15,7 +15,7 @@ Do not store secrets in this file.
 | Node | v24.18.1 |
 | Docker | 29.6.2 |
 
-## Phase 4 — Secure multilingual voice
+## Phase 4 â€” Secure multilingual voice
 
 ### Start
 - Began from `phase-3-complete` / `a9a7f33`
@@ -24,19 +24,19 @@ Do not store secrets in this file.
 - `0004_phase4_voice` (revision `0004_phase4`)
 
 ### Models added
-- `VoiceMessage` — upload metadata, transcript, confirmation state
-- `SpeechSynthesis` — TTS output records
-- `VoiceTrace` — per-request audit/observability
+- `VoiceMessage` â€” upload metadata, transcript, confirmation state
+- `SpeechSynthesis` â€” TTS output records
+- `VoiceTrace` â€” per-request audit/observability
 
 ### Components delivered
-- `backend/app/voice/` — STT, TTS, validation, rate limiting, storage modules
-- `backend/app/api/v1/voice.py` — full voice endpoint router
-- `backend/app/services/voice.py` — service layer
-- `backend/app/schemas/voice.py` — request/response models
-- `docker-compose.test.yml` — isolated test Compose stack
-- `backend/Dockerfile` — multi-stage runtime + test target
-- `frontend/src/components/ChatPanel.tsx` — voice recording UI
-- `sample_data/audio/` — fixture WAV files for tests
+- `backend/app/voice/` â€” STT, TTS, validation, rate limiting, storage modules
+- `backend/app/api/v1/voice.py` â€” full voice endpoint router
+- `backend/app/services/voice.py` â€” service layer
+- `backend/app/schemas/voice.py` â€” request/response models
+- `docker-compose.test.yml` â€” isolated test Compose stack
+- `backend/Dockerfile` â€” multi-stage runtime + test target
+- `frontend/src/components/ChatPanel.tsx` â€” voice recording UI
+- `sample_data/audio/` â€” fixture WAV files for tests
 
 ### Notes
 - Voice is a transport into the existing controlled orchestrator
@@ -56,23 +56,23 @@ Do not store secrets in this file.
 | `npm run lint` | Pass |
 | `npm run build` | Pass |
 | Docker rebuild + health | Pass (backend healthy) |
-| Migration cycle (down 0003 → up 0004) | Pass |
-| Knowledge seed ×2 | `already_present` 17 docs / 241 chunks |
+| Migration cycle (down 0003 â†’ up 0004) | Pass |
+| Knowledge seed Ã—2 | `already_present` 17 docs / 241 chunks |
 
 ### Known limitations
-- STT/TTS are deterministic mocks only — no real speech quality claims
+- STT/TTS are deterministic mocks only â€” no real speech quality claims
 - Audio storage is local filesystem; no S3 integration required for demo
 - No production voice provider credentials needed
 
 ### Commit / tag
-- Commit: `0e05e4c` — `feat: complete VaaniDesk phase 4 secure multilingual voice`
+- Commit: `0e05e4c` â€” `feat: complete VaaniDesk phase 4 secure multilingual voice`
 - Tag: `phase-4-complete`
 
 ---
 
 ---
 
-## Phase 5 — Omnichannel Communication
+## Phase 5 â€” Omnichannel Communication
 
 ### Start state
 | Item | Value |
@@ -101,7 +101,7 @@ Do not store secrets in this file.
 - `backend/app/schemas/channels.py` (new)
 - `backend/app/services/channels.py` (new)
 - `backend/app/api/v1/channels.py` (new)
-- `backend/tests/test_phase5_channels.py` (new — 41 tests)
+- `backend/tests/test_phase5_channels.py` (new â€” 41 tests)
 - `frontend/src/app/channels/page.tsx` (new)
 - Config, router, models/__init__.py, alembic/env.py, .env.example updated
 
@@ -117,13 +117,15 @@ Do not store secrets in this file.
 | `npm run build` | Pass |
 
 ### Known limitations
-- Email and WhatsApp use development simulators — no real SMTP/Meta delivery
+- Email and WhatsApp use development simulators â€” no real SMTP/Meta delivery
 - External sensitive actions require authenticated web confirmation links
 - Unlinked channel identities cannot access account-scoped order data
 
 ### Commit / tag
-- Pending after final Docker/health verification
+- Commit: `fc8ec61` — feat: complete VaaniDesk phase 5 omnichannel support
+- Tag: `phase-5-complete`
 
 ---
 
 _Results appended at each phase checkpoint._
+

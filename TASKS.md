@@ -8,7 +8,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` 
 **Tags:** `phase-1-complete`, `phase-2-complete`, `phase-3-complete`, `phase-4-complete`
 **Phase 3:** complete
 **Phase 4:** complete (`0e05e4c`, tag `phase-4-complete`) — 86 tests passed, 0 skipped
-**Phase 5:** complete pending commit — 127 tests passed, 0 skipped
+**Phase 5:** complete (`fc8ec61`, tag `phase-5-complete`) — 127 tests passed, 0 skipped
 
 ---
 
@@ -82,3 +82,4 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` 
 - Phase 5 email/WhatsApp use labeled development simulators; no real external delivery in CI.
 - External channel sensitive writes require authenticated web confirmation links.
 - Phase 3 expected prompt hash `cf175b7` mismatched actual tagged commit `a9a7f33` — proceeded from actual tag.
+
