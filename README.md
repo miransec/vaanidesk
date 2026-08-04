@@ -4,15 +4,15 @@
 
 VaaniDesk is a production-shaped AI customer-support platform for a fictional e-commerce company (portfolio project for **Puch AI**).
 
-> **Status:** Phase 4 complete (86 pytest passed, 0 skipped). Tagged baselines: `phase-1-complete`, `phase-2-complete`. Phase 5 (MCP) not started.
+> **Status:** Phase 5 (omnichannel) in progress. Phase 4 complete (86 tests). Tagged baselines: `phase-1-complete` through `phase-4-complete`.
 
 **Default Git branch:** `main`
 
 ---
 
-## What works now (Phases 1–4)
+## What works now (Phases 1–5)
 
-- FastAPI `/health`, `/ready`, `/api/v1` chat + confirm + **knowledge** + **voice** APIs
+- FastAPI `/health`, `/ready`, `/api/v1` chat + confirm + **knowledge** + **voice** + **channels** APIs
 - Explicit workflow: language → intent → **tools or RAG** → AuthZ → confirmation → traces
 - Tools: order status/details, address update, cancel eligibility/cancel, tickets, human queue
 - Knowledge: Markdown/text/JSON ingest, versions, deterministic mock embeddings, FTS + pgvector, hybrid RRF, optional mock rerank
@@ -21,7 +21,8 @@ VaaniDesk is a production-shaped AI customer-support platform for a fictional e-
 - Knowledge seed path via `KNOWLEDGE_SEED_DIR` (Compose: `/sample_data/policies`; host fallback to repo `sample_data/policies`)
 - **Voice** (Phase 4): upload → mock STT → transcript confirm → submit to orchestrator; mock TTS for responses
 - Voice features: `VOICE_ENABLED` toggle, local `AudioStorage`, per-user rate limiting, transcript confirmation for sensitive intents
-- Next.js `/chat` (citations + retrieval metadata + voice recording UI) and `/knowledge` (ingest + retrieval test)
+- **Channels** (Phase 5): omnichannel adapters (email dev inbox, WhatsApp simulator, web passthrough), HMAC-verified webhooks, inbound pipeline with dedup, identity linking, external confirmation for sensitive actions, transactional outbox, human handoff queue
+- Next.js `/chat`, `/knowledge`, `/channels` operator pages
 - Compose: postgres (pgvector), redis, backend, frontend
 - `docker-compose.test.yml` for isolated test runs
 

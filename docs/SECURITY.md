@@ -52,9 +52,24 @@ Protect customer data isolation, prevent unauthorized tool execution, contain pr
 | Storage retention | Audio files expire after `AUDIO_RETENTION_HOURS`; cleanup endpoint removes stale files |
 | Edit invalidation | Editing a transcript invalidates prior confirmation — re-confirmation required |
 
+## Phase 5 — Channel Security
+
+| Control | Implementation |
+|---------|---------------|
+| HMAC signature verification | Constant-time compare, fail closed on missing/invalid signature |
+| Timestamp tolerance | Reject webhooks with timestamps outside configurable window (default 300s) |
+| Replay protection | Event ID + timestamp stored; duplicate signatures rejected |
+| External confirmation | Sensitive write intents from channels require signed one-time web confirmation (not "yes" in chat) |
+| Identity linking | One-time challenge token, single-use, expiring; unlink revokes access |
+| Attachment validation | Size cap, MIME type check, executable extensions blocked |
+| Cross-user attachment denial | Download authorization checks owner_user_id matches requesting user |
+| Unlinked identity restriction | Cannot access account orders or perform sensitive actions |
+| No secrets in logs | Webhook payloads, raw tokens, and full message bodies not logged at INFO |
+| Human handoff | Auto-responses paused when conversation assigned to human agent |
+
 ## Verification
 
-Phase 2 security suite remains green. Phase 3 adds cross-user restricted-doc denial, reranker isolation, malicious-doc tool non-execution, citation integrity, and multilingual policy chat tests. Phase 4 adds voice upload ownership, transcript confirmation for sensitive actions, rate limit enforcement, and audio retention/cleanup.
+Phase 2 security suite remains green. Phase 3 adds cross-user restricted-doc denial, reranker isolation, malicious-doc tool non-execution, citation integrity, and multilingual policy chat tests. Phase 4 adds voice upload ownership, transcript confirmation for sensitive actions, rate limit enforcement, and audio retention/cleanup. Phase 5 adds HMAC verification, replay protection, external confirmation for sensitive channel actions, identity linking security, and attachment validation.
 
 ---
 

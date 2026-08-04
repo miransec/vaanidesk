@@ -42,3 +42,32 @@ Voice is a transport into the existing orchestrator. Default STT/TTS are **deter
 | POST | `/voice/cleanup` | expired audio cleanup |
 
 Sensitive intents always require transcript confirmation before submit. Editing invalidates prior confirmation.
+
+---
+
+## Phase 5 — Channels (prefix: `/channels`)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/channels/connections` | list channel connections |
+| POST | `/channels/connections/{id}/toggle` | enable/disable connection |
+| POST | `/channels/webhook/email` | inbound email webhook |
+| POST | `/channels/webhook/whatsapp` | inbound WhatsApp webhook |
+| GET | `/channels/webhook/whatsapp` | WhatsApp verification challenge |
+| POST | `/channels/simulator/email` | dev email simulator |
+| POST | `/channels/simulator/whatsapp` | dev WhatsApp simulator |
+| POST | `/channels/identity/link` | create identity link challenge |
+| POST | `/channels/identity/link/complete` | complete link with token |
+| POST | `/channels/identity/unlink` | unlink identity |
+| GET | `/channels/confirm` | get external confirmation details |
+| POST | `/channels/confirm` | confirm/deny external action |
+| GET | `/channels/outbound/failed` | list failed outbound messages |
+| POST | `/channels/outbound/{id}/retry` | retry failed message |
+| GET | `/channels/handoff` | list human handoff queue |
+| POST | `/channels/handoff/{id}/assign` | assign to agent |
+| GET | `/channels/events` | list inbound events |
+| GET | `/channels/attachments/{id}` | authorized attachment download |
+| POST | `/channels/seed` | seed default connections |
+
+Webhooks do not require demo auth. Simulator and management endpoints require X-Demo-User-Key.
+Sensitive actions from external channels require authenticated web confirmation (one-time signed link).

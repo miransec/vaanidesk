@@ -2,7 +2,7 @@
 
 **Tagline:** Multilingual AI support across chat, voice and images
 **Portfolio target:** Puch AI engineering application
-**Phase status:** Phase 4 secure multilingual voice complete (86 tests, 0 skipped). Phase 5 (MCP) not started.
+**Phase status:** Phase 5 omnichannel communication in progress. Phase 4 voice complete (86 tests). Phase 6 (MCP) not started.
 
 **Default Git branch:** `main` (rename from empty-repo `master` before first commit)
 

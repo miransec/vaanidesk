@@ -116,6 +116,38 @@ def test_title(label: str) -> str:
 
 
 TEST_VOICE_REQUEST_PREFIX = "vdtest-voice-"
+TEST_CHANNEL_EVENT_PREFIX = "vdtest-ch-"
+
+
+async def delete_test_channel_artifacts() -> int:
+    """Remove channel rows created by Phase 5 tests. Returns deleted count."""
+    from app.database.session import SessionLocal
+    from app.models.channels import (
+        ChannelAttachment,
+        DeliveryAttempt,
+        ExternalConfirmationRequest,
+        HumanHandoffQueueItem,
+        IdentityLinkChallenge,
+        InboundEvent,
+        OutboundMessage,
+    )
+    from sqlalchemy import delete
+
+    removed = 0
+    async with SessionLocal() as db:
+        for model in [
+            DeliveryAttempt,
+            ChannelAttachment,
+            OutboundMessage,
+            InboundEvent,
+            ExternalConfirmationRequest,
+            IdentityLinkChallenge,
+            HumanHandoffQueueItem,
+        ]:
+            result = await db.execute(delete(model))
+            removed += result.rowcount or 0
+        await db.commit()
+    return removed
 
 
 async def delete_test_voice_artifacts(

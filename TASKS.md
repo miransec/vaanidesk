@@ -1,6 +1,6 @@
 ﻿# VaaniDesk — Task Tracker
 
-Last updated: 2026-08-04 (Phase 4 complete; Phase 5 in progress)
+Last updated: 2026-08-04 (Phase 5 complete pending commit)
 
 Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` risk
 
@@ -8,7 +8,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` 
 **Tags:** `phase-1-complete`, `phase-2-complete`, `phase-3-complete`, `phase-4-complete`
 **Phase 3:** complete
 **Phase 4:** complete (`0e05e4c`, tag `phase-4-complete`) — 86 tests passed, 0 skipped
-**Phase 5:** in progress
+**Phase 5:** complete pending commit — 127 tests passed, 0 skipped
 
 ---
 
@@ -51,12 +51,18 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` 
 
 ## Phase 5 — Omnichannel communication
 
-- [~] Channel adapter boundary + models + migration
-- [ ] Email + WhatsApp-compatible adapters (dev simulators)
-- [ ] Identity linking + external sensitive confirmation
-- [ ] Outbox / delivery retries / human handoff
-- [ ] Operator channel UI
-- [ ] Tests + quality gates + commit/tag
+- [x] Channel adapter boundary + models + migration `0005_phase5`
+- [x] Email + WhatsApp-compatible adapters (dev simulators)
+- [x] Identity linking + external sensitive confirmation
+- [x] Outbox / delivery retries / human handoff
+- [x] Operator channel UI (`/channels`)
+- [x] Tests (41) + quality gates: 127 passed, 0 skipped
+
+---
+
+## Phase 6 — Evaluations / observability
+
+- [ ] Not started
 
 ---
 
@@ -72,12 +78,7 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` blocked · `[!]` 
 
 - Confirmation Redis key = `vd:confirm:` + SHA-256(raw token); payload omits raw token.
 - RAG embeddings are deterministic lexical mocks — not production semantic embeddings.
-- Access control filters apply in SQL before candidates leave Postgres.
-- Restricted corpus doc `Internal Override Notes` allowlists `demo-anya` only (injection bait).
-- Knowledge seed: Compose `KNOWLEDGE_SEED_DIR=/sample_data/policies` with `./sample_data:/sample_data:ro`.
-- Phase 2 order helpers re-arm pending/confirmed status instead of skipping when prior cancels exhaust stock.
-- Phase 3 ingest tests use `__vdtest__` titles + `isolated_knowledge` cleanup so the demo corpus is not polluted.
 - Phase 4 voice STT/TTS are deterministic mocks — not real speech providers.
-- Phase 4 audio fixtures in `sample_data/audio/`.
-- Voice transcript confirmation binds SHA-256 hash; edit invalidates prior confirmation.
+- Phase 5 email/WhatsApp use labeled development simulators; no real external delivery in CI.
+- External channel sensitive writes require authenticated web confirmation links.
 - Phase 3 expected prompt hash `cf175b7` mismatched actual tagged commit `a9a7f33` — proceeded from actual tag.

@@ -68,6 +68,18 @@ class Settings(BaseSettings):
     rag_min_retrieval_confidence: float = 0.30
     max_knowledge_upload_bytes: int = 512000
 
+    # Phase 5 — omnichannel
+    channels_enabled: bool = True
+    email_adapter_enabled: bool = True
+    whatsapp_enabled: bool = False
+    channel_webhook_max_bytes: int = 1_048_576
+    channel_signature_tolerance_seconds: int = 300
+    channel_link_challenge_ttl_seconds: int = 600
+    channel_external_confirm_ttl_seconds: int = 600
+    channel_attachment_max_bytes: int = 10_485_760
+    channel_outbox_max_attempts: int = 5
+    channel_hmac_secret: str = "dev-hmac-secret-not-for-production"
+
     # Phase 4 — voice / audio
     voice_enabled: bool = True
     voice_auto_submit_enabled: bool = True

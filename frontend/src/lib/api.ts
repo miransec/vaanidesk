@@ -525,3 +525,144 @@ export function getAudioDownloadUrl(
   }
   return `${base}/synthesis/${id}/download`;
 }
+
+// --- Phase 5 channels ---
+
+export type ChannelConnectionOut = {
+  id: string;
+  channel_type: string;
+  display_name: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InboundEventOut = {
+  id: string;
+  channel_connection_id: string;
+  external_event_id: string;
+  status: string;
+  received_at: string;
+  processed_at: string | null;
+  error_code: string | null;
+  safe_metadata: Record<string, unknown> | null;
+};
+
+export type OutboundMessageOut = {
+  id: string;
+  conversation_id: string;
+  channel_connection_id: string;
+  message_type: string;
+  rendered_content: string;
+  status: string;
+  created_at: string;
+  sent_at: string | null;
+  failed_at: string | null;
+};
+
+export type HandoffQueueItemOut = {
+  id: string;
+  conversation_id: string;
+  status: string;
+  assigned_agent_id: string | null;
+  summary: string;
+  created_at: string;
+};
+
+export async function listChannelConnections(demoKey: string): Promise<ChannelConnectionOut[]> {
+  const res = await fetch(`${API_URL}/api/v1/channels/connections`, {
+    headers: { "X-Demo-User-Key": demoKey },
+    cache: "no-store",
+  });
+  return parseJson<ChannelConnectionOut[]>(res);
+}
+
+export async function toggleChannelConnection(
+  demoKey: string,
+  connectionId: string,
+  enabled: boolean,
+): Promise<ChannelConnectionOut> {
+  const res = await fetch(`${API_URL}/api/v1/channels/connections/${connectionId}/toggle`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Demo-User-Key": demoKey },
+    body: JSON.stringify({ enabled }),
+  });
+  return parseJson<ChannelConnectionOut>(res);
+}
+
+export async function listInboundEvents(demoKey: string): Promise<InboundEventOut[]> {
+  const res = await fetch(`${API_URL}/api/v1/channels/events`, {
+    headers: { "X-Demo-User-Key": demoKey },
+    cache: "no-store",
+  });
+  return parseJson<InboundEventOut[]>(res);
+}
+
+export async function listFailedOutbound(demoKey: string): Promise<OutboundMessageOut[]> {
+  const res = await fetch(`${API_URL}/api/v1/channels/outbound/failed`, {
+    headers: { "X-Demo-User-Key": demoKey },
+    cache: "no-store",
+  });
+  return parseJson<OutboundMessageOut[]>(res);
+}
+
+export async function retryOutbound(demoKey: string, messageId: string): Promise<unknown> {
+  const res = await fetch(`${API_URL}/api/v1/channels/outbound/${messageId}/retry`, {
+    method: "POST",
+    headers: { "X-Demo-User-Key": demoKey },
+  });
+  return parseJson(res);
+}
+
+export async function listHandoffQueue(demoKey: string): Promise<HandoffQueueItemOut[]> {
+  const res = await fetch(`${API_URL}/api/v1/channels/handoff`, {
+    headers: { "X-Demo-User-Key": demoKey },
+    cache: "no-store",
+  });
+  return parseJson<HandoffQueueItemOut[]>(res);
+}
+
+export async function assignHandoff(
+  demoKey: string,
+  handoffId: string,
+  agentId: string,
+): Promise<unknown> {
+  const res = await fetch(`${API_URL}/api/v1/channels/handoff/${handoffId}/assign`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Demo-User-Key": demoKey },
+    body: JSON.stringify({ agent_id: agentId }),
+  });
+  return parseJson(res);
+}
+
+export async function simulateEmailEvent(
+  demoKey: string,
+  event: { from_email: string; from_display: string; subject: string; text_body: string },
+): Promise<unknown> {
+  const res = await fetch(`${API_URL}/api/v1/channels/simulator/email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Demo-User-Key": demoKey },
+    body: JSON.stringify(event),
+  });
+  return parseJson(res);
+}
+
+export async function simulateWhatsAppEvent(
+  demoKey: string,
+  event: { from_phone: string; display_name: string; text: string },
+): Promise<unknown> {
+  const res = await fetch(`${API_URL}/api/v1/channels/simulator/whatsapp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Demo-User-Key": demoKey },
+    body: JSON.stringify(event),
+  });
+  return parseJson(res);
+}
+
+export async function seedChannelConnections(demoKey: string): Promise<unknown> {
+  const res = await fetch(`${API_URL}/api/v1/channels/seed`, {
+    method: "POST",
+    headers: { "X-Demo-User-Key": demoKey },
+  });
+  return parseJson(res);
+}

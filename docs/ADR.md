@@ -230,3 +230,27 @@ Finalized decisions for VaaniDesk. Narrative context remains in [`PLAN.md`](../P
 **Decision:** Audio files are stored on local filesystem (`AUDIO_STORAGE_DIR`) with configurable retention (`AUDIO_RETENTION_HOURS`). A cleanup endpoint removes expired files. No S3 integration required for demo mode. Raw audio bytes never appear in agent traces or logs.
 **Why:** Simple local-first approach for portfolio demo; avoids cloud storage dependencies. Retention bounds prevent unbounded disk growth. Excluding audio from traces protects user privacy and keeps trace payloads manageable.
 
+---
+
+## ADR-029 — Channel adapter boundary pattern
+
+**Status:** Accepted
+**Decision:** All channel integrations implement a ChannelAdapter protocol (validate, verify_signature, normalize_sender, normalize_message, send_message). Raw webhook payloads never reach the AI model or orchestrator — only normalized text passes through. Each adapter handles its own wire format (MIME for email, Meta webhook JSON for WhatsApp).
+**Why:** Clean separation prevents webhook-specific vulnerabilities from reaching business logic. Normalizing at the boundary means the orchestrator and tools remain channel-agnostic. New channels can be added by implementing the protocol without modifying core logic.
+
+---
+
+## ADR-030 — External confirmation for sensitive channel actions
+
+**Status:** Accepted
+**Decision:** When a sensitive write intent (e.g., cancel order) originates from an external channel, the system does NOT accept a simple "yes" reply. Instead, it creates an ExternalConfirmationRequest with a signed one-time link to the frontend web app. The action executes only after authenticated web confirmation (binding user, identity, action, args, and expiry).
+**Why:** External channels lack the session/authentication guarantees of the web interface. A chat reply of "yes" could be spoofed or sent by someone with access to the phone/email but not the account. The web confirmation adds authenticated proof-of-intent.
+
+---
+
+## ADR-031 — Identity linking with challenge tokens
+
+**Status:** Accepted
+**Decision:** Channel identities (email address hash, phone number hash) are linked to VaaniDesk user accounts via a challenge-response flow: system generates a one-time token, user completes linking through an authenticated web session. Tokens are single-use, time-bounded, and hashed in storage. Unlinking revokes the identity's access to account data.
+**Why:** Prevents unauthorized account association. An attacker sending messages from a stolen phone/email cannot automatically access order data. The web confirmation requirement ensures the account owner explicitly approves the link.
+

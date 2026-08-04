@@ -207,3 +207,39 @@ backend/app/voice/
 - Rate limiting: uploads/min, bytes/hour, STT requests/min, TTS requests/min, max concurrent jobs
 - Audio retention is time-bounded (`AUDIO_RETENTION_HOURS`); cleanup endpoint removes expired files
 - No raw audio stored in agent traces — only transcript text and metadata
+
+---
+
+## Phase 5 — Omnichannel Communication
+
+### Channel adapter boundary
+
+```text
+backend/app/channels/
+├── __init__.py
+├── base.py             # ChannelAdapter protocol/ABC
+├── signatures.py       # HMAC verify (constant-time, timestamp tolerance, replay store)
+├── pipeline.py         # Inbound: size→verify→parse→dedupe→normalize→identity→conversation→orchestrator
+├── outbox.py           # Transactional outbox: deliver, retry, dead-letter
+├── renderers.py        # Channel-specific: web, email plain+HTML, whatsapp concise
+├── attachments.py      # Validate size/MIME/signature; reject executables
+├── linking.py          # Identity link challenges (create, complete, expire, unlink)
+├── handoff.py          # Human escalation queue management
+├── web.py              # Thin adapter (web chat uses REST API directly)
+├── email/
+│   ├── adapter.py      # MIME parse, HTML sanitize, subject threading, message-id dedup
+│   └── dev_inbox.py    # Deterministic dev inbox (no real SMTP)
+└── whatsapp/
+    ├── adapter.py      # Meta-style webhook schema, verify challenge, normalize
+    └── simulator.py    # Local/dev simulator with valid HMAC signatures
+```
+
+### Key design decisions
+
+- All normalized inbound calls the existing conversation + orchestrator path — model never sees raw webhooks
+- Sensitive write intents from external channels require ExternalConfirmationRequest (signed one-time web link)
+- Unlinked identities get limited anonymous/support only — cannot access account orders
+- HMAC verification fails closed: missing sig, stale timestamp, or replay all reject
+- Transactional outbox with exponential backoff retry (max attempts configurable)
+- Human handoff queue pauses auto-responses when assigned
+- Attachments validated for size, MIME type, and extension; executables blocked
